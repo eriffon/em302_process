@@ -10,7 +10,7 @@ LOG=log.txt
 
 DIR_ROOT=$(pwd)
 
-DIR_DATA_ALL=$DIR_ROOT/all/PT-roll
+DIR_DATA_ALL=$DIR_ROOT/all/PT-time-pitch-yaw
 DIR_DATA_MB59=$DIR_ROOT/mb59
 DIR_DATA_GSF=$DIR_ROOT/gsf
 DIR_SHIPTRACK=$DIR_ROOT/shiptrack
