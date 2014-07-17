@@ -6,10 +6,12 @@
 #
 ########################################################################
 
+LOG=log.txt
+
 DIR_ROOT=$(pwd)
-DIR_DATA_ALL=$DIR_ROOT/all
+
+DIR_DATA_ALL=$DIR_ROOT/all/PT-roll
 DIR_DATA_MB59=$DIR_ROOT/mb59
-DIR_DATA_MB59E=$DIR_ROOT/mb59e
 DIR_DATA_GSF=$DIR_ROOT/gsf
 DIR_SHIPTRACK=$DIR_ROOT/shiptrack
 DIR_WEBTIDE=$DIR_ROOT/tide	
@@ -17,7 +19,6 @@ DIR_HIPS_TIDE=$DIR_ROOT/tide
 
 DATALIST_ALL=datalist_all.mb-1
 DATALIST_MB59=datalist_mb59.mb-1
-DATALIST_MB59E=datalist_mb59.mb-1
 DATALIST_GSF=datalist_gsf.mb-1
 
 UNPROCESSED_DATALIST_ALL=unprocessed_datalist_all.mb-1
