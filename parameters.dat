@@ -1,0 +1,32 @@
+########################################################################
+# Kongsberg EM302 Sonar Processing Parameter file
+#
+# Created by Jean-Guy Nistad
+# Created on 2014-07-09
+#
+########################################################################
+
+DIR_ROOT=$(pwd)
+DIR_DATA_ALL=$DIR_ROOT/all
+DIR_DATA_MB59=$DIR_ROOT/mb59
+DIR_DATA_MB59E=$DIR_ROOT/mb59e
+DIR_DATA_GSF=$DIR_ROOT/gsf
+DIR_SHIPTRACK=$DIR_ROOT/shiptrack
+DIR_WEBTIDE=$DIR_ROOT/tide	
+DIR_HIPS_TIDE=$DIR_ROOT/tide
+
+DATALIST_ALL=datalist_all.mb-1
+DATALIST_MB59=datalist_mb59.mb-1
+DATALIST_MB59E=datalist_mb59.mb-1
+DATALIST_GSF=datalist_gsf.mb-1
+
+UNPROCESSED_DATALIST_ALL=unprocessed_datalist_all.mb-1
+UNPROCESSED_DATALIST_MB59=unprocessed_datalist_mb59.mb-1
+UNPROCESSED_DATALIST_GSF=unprocessed_datalist_gsf.mb-1
+
+MERGE_GSF_SCRIPT=merge_gsf.sh
+
+SHIPTRACK_PREFIX=shiptrack
+HIPS_TIDE_PREFIX=hips_tide
+
+WEBTIDE_NAME=Track_Elevation_Prediction_Time_in_GMT.html
