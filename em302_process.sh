@@ -11,7 +11,7 @@
 # PROCESS_ALL() - Process all .all files to generate mb59 files
 #
 process_all() {
-    printf "Processing all .all files in directory %s at %s UTC...\n" $DIR_DATA_ALL $(date --utc +%Y%m%d-%H%M%S) | tee -a $LOG
+    printf "%s UTC: Processing all .all files in directory %s.\n\n" $(date --utc +%Y%m%d-%H%M%S) $DIR_DATA_ALL | tee -a $LOG
 
     # Create the .all datalist
     printf "Creating the .all datalist." | tee -a $LOG
@@ -95,12 +95,12 @@ process_all() {
 # GRID() - Grid the mb59 files listed in the datalist
 #
 grid() {
-    printf "Gridding at 10m resolution the %s MB-System datalist at %s UTC.\n" $1 $(date --utc +%Y%m%d-%H%M%S) | tee -a $LOG
+    printf "%s UTC: Gridding at 10m resolution the %s MB-System datalist.\n\n" $(date --utc +%Y%m%d-%H%M%S) $1 | tee -a $LOG
     # Make a NetCDF grid
     printf "Making an ASCII ESRI grid...\n" | tee -a $LOG
-    mbgrid -A1 -I $1 -J$PROJECTION -G4 -N -V -O $GRID -E10/0.0/meters!
-    gdal_translate -of AAIGrid -a_srs omg.prf $GRID.asc $GRID-LCC.asc
-    rm $GRID.asc     # Comment out for debugging
+    mbgrid -A1 -I $1 -J$PROJECTION -G4 -N -V -O $DIR_SURFACES/$GRID -E10/0.0/meters!
+    gdal_translate -of AAIGrid -a_srs $PROJ_WKT $DIR_SURFACES/$GRID.asc $DIR_SURFACES/$GRID-LCC.asc
+    rm $DIR_SURFACES/$GRID.asc     # Comment out for debugging
     printf "done.\n" | tee -a $LOG
 }
 
@@ -114,24 +114,24 @@ dem() {
     # min=$(gdalinfo surface_10m-LCC.asc | grep 'Min=' | awk '{gsub("Min=",""); print $1}')
     # max=$(gdalinfo surface_10m-LCC.asc | grep 'Max=' | awk '{gsub("Min=",""); print $2}')
 
-    printf "Making a geotiff DEM using the %s color table at %s UTC.\n" $1 $(date --utc +%Y%m%d-%H%M%S) | tee -a $LOG
+    printf "%s UTC: Making a geotiff DEM using the %s color table.\n\n" $(date --utc +%Y%m%d-%H%M%S) $1 | tee -a $LOG
     # Make the relief geotiff
     printf "Making a relief geotiff..."
-    gdaldem color-relief $GRID-LCC.asc $1 $GRID-relief-LCC.tif -of GTiff
+    gdaldem color-relief $DIR_SURFACES/$GRID-LCC.asc $1 $DIR_SURFACES/$GRID-relief-LCC.tif -of GTiff
     printf "done.\n" | tee -a $LOG
 
     # Make a hillshade geoTIFF
     printf "Making a hillshade geoTIFF..." | tee -a $LOG
-    gdaldem hillshade $GRID-LCC.asc $GRID-hillshade-LCC.tif -of GTiff
+    gdaldem hillshade $DIR_SURFACES/$GRID-LCC.asc $DIR_SURFACES/$GRID-hillshade-LCC.tif -of GTiff
     printf "done.\n" | tee -a $LOG
 
     # Merge the relief and hillshade geoTIFF
     printf "Merging relief and hillshade..." | tee -a $LOG
-    hsv_merge.py $GRID-relief-LCC.tif $GRID-hillshade-LCC.tif $GRID-dem-LCC.tif
+    hsv_merge.py $DIR_SURFACES/$GRID-relief-LCC.tif $DIR_SURFACES/$GRID-hillshade-LCC.tif $DIR_SURFACES/$GRID-dem-LCC.tif
     printf "done.\n" | tee -a $LOG
 
     # clean up
-    rm $GRID-relief-LCC.tif $GRID-hillshade-LCC.tif
+    rm $DIR_SURFACES/$GRID-relief-LCC.tif $DIR_SURFACES/$GRID-hillshade-LCC.tif
 }
 
 #
@@ -149,17 +149,20 @@ shiptrack() {
 # WEBTIDE2CARIS() - Convert the Webtide prediction file to a CARIS HIPS & SIPS tide file
 #
 webtide2caris() {
-    printf "Converting the Webtide prediction file to a CARIS HIPS & SIPS tide file at %s UTC..." $(date --utc +%Y%m%d-%H%M%S) | tee -a $LOG
+    printf "%s UTC: Converting the Webtide prediction file to a CARIS HIPS & SIPS tide file.\n\n" $(date --utc +%Y%m%d-%H%M%S) | tee -a $LOG
     # Check that the track prediction file exists
+    printf "Checking that the Webtide file has been generated..."
     if [ ! -f $DIR_WEBTIDE/Track\ Elevation\ Prediction\ \(Time\ in\ GMT\).html ]; then
-	printf "Warning! File Track Elevation Prediction (Time in GMT).html not found! Have you copied the output from Webtide to the %s directory?\n" $DIR_WEBTIDE  | tee -a $LOG
+	printf "\nWarning! File Track Elevation Prediction (Time in GMT).html not found! Have you copied the output from Webtide to the %s directory?\n" $DIR_WEBTIDE  | tee -a $LOG
 	exit 1
     fi
+    printf "done.\n"
 
     # Rename the webtide track prediction file
     cp $DIR_WEBTIDE/Track\ Elevation\ Prediction\ \(Time\ in\ GMT\).html $DIR_WEBTIDE/$WEBTIDE_NAME
 
     # Generate the CARIS HIPS & SIPS tide file
+    printf "Creating the CARIS HIPS & SIPS tide file..."
     touch tempfile | echo "--------" > tempfile
     TIMESTAMP=$(date --utc +%Y%m%d-%H%M%S).tid
     tail -n+8 $DIR_WEBTIDE/$WEBTIDE_NAME | head -n-3 | sed '/<\/p><pre>/,/<\/pre>/ s/<\/p><pre>//g' | \
@@ -177,17 +180,20 @@ webtide2caris() {
 # WEBTIDE2MB() - Convert the Webtide prediction file to a MB-System tide file
 #
 webtide2mb() {
-    printf "Converting the Webtide prediction file to a MB-System tide file at %s UTC..." $(date --utc +%Y%m%d-%H%M%S) | tee -a $LOG
+    printf "%s UTC: Converting the Webtide prediction file to a MB-System tide file\n\n" $(date --utc +%Y%m%d-%H%M%S) | tee -a $LOG
     # Check that the track prediction file exists
+    printf "Checking that the Webtide file has been generated..."
     if [ ! -f $DIR_WEBTIDE/Track\ Elevation\ Prediction\ \(Time\ in\ GMT\).html ]; then
 	printf "Warning! File Track Elevation Prediction (Time in GMT).html not found! Have you copied the output from Webtide to the %s directory?\n" $DIR_WEBTIDE  | tee -a $LOG
 	exit 1
     fi
+    printf "done.\n"
 
     # Rename the webtide track prediction file
     cp $DIR_WEBTIDE/Track\ Elevation\ Prediction\ \(Time\ in\ GMT\).html $DIR_WEBTIDE/$WEBTIDE_NAME
 
     # Generate the MB-system tide file
+    printf "Creating the MB-System tide file..."
     TIMESTAMP=$(date --utc +%Y%m%d-%H%M%S).mbt
     tail -n+8 $DIR_WEBTIDE/$WEBTIDE_NAME | head -n-3 | sed '/<\/p><pre>/,/<\/pre>/ s/<\/p><pre>//g' | \
 	awk '{$1=$1}1' | cut -d' ' -f1,4-8 | awk 'BEGIN {FS = OFS = " " } {print $2, $3, $4, $5, $6, $1}' >> $DIR_MB_TIDE/$MB_TIDE_PREFIX-$TIMESTAMP

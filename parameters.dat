@@ -17,6 +17,7 @@ DIR_SHIPTRACK=$DIR_ROOT/shiptrack
 DIR_WEBTIDE=$DIR_ROOT/tide	
 DIR_HIPS_TIDE=$DIR_ROOT/tide
 DIR_MB_TIDE=$DIR_ROOT/tide
+DIR_SURFACES=$DIR_ROOT/surfaces
 
 DATALIST_ALL=datalist_all.mb-1
 DATALIST_MB59=datalist_mb59.mb-1
@@ -45,5 +46,5 @@ WEBTIDE_NAME=Track_Elevation_Prediction_Time_in_GMT.html
 ########################################################################
 
 PROJECTION=user100002
-GRID=surface_10m
+GRID=surface_svp_10m
 PROJ_WKT=omg.wkt
