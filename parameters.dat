@@ -47,4 +47,5 @@ WEBTIDE_NAME=Track_Elevation_Prediction_Time_in_GMT.html
 
 PROJECTION=user100002
 GRID=surface_svp_10m
+CELLSIZE=10
 PROJ_WKT=omg.wkt
