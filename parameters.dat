@@ -2,50 +2,46 @@
 # Kongsberg EM302 Sonar Processing Parameter file
 #
 # Created by Jean-Guy Nistad
-# Created on 2014-07-09
+# Created on 2014-08-05
 #
 ########################################################################
 
+# Name of the log file
 LOG=log.txt
 
+# Current directory (normally, you should not have to edit this)
 DIR_ROOT=$(pwd)
 
-DIR_DATA_ALL=$DIR_ROOT/all/PT-time-pitch-yaw
-DIR_DATA_MB59=$DIR_ROOT/mb59/PT-time-pitch-yaw
-DIR_DATA_GSF=$DIR_ROOT/gsf
-DIR_SHIPTRACK=$DIR_ROOT/shiptrack
-DIR_WEBTIDE=$DIR_ROOT/tide	
-DIR_HIPS_TIDE=$DIR_ROOT/tide
-DIR_MB_TIDE=$DIR_ROOT/tide
-DIR_SURFACES=$DIR_ROOT/surfaces
+DIR_DATA_ALL=$DIR_ROOT/all/PT-time-pitch-yaw       # Path to the .all files to read
+DIR_DATA_MB59=$DIR_ROOT/mb59/PT-time-pitch-yaw     # Path to where the .mb59 files should be written
+DIR_DATA_GSF=$DIR_ROOT/gsf                         # Path to the .gsf files should be read
+DIR_SHIPTRACK=$DIR_ROOT/shiptrack                  # Path to the shiptracks
+DIR_WEBTIDE=$DIR_ROOT/tide	                   # Path to where the Webtide file should be written
+DIR_HIPS_TIDE=$DIR_ROOT/tide                       # Path to where the CARIS Tide files should be written
+DIR_MB_TIDE=$DIR_ROOT/tide                         # Path to where the MB-System files should be written
+DIR_SURFACES=$DIR_ROOT/surfaces                    # Path to where the grids should be written
 
-DATALIST_ALL=datalist_all.mb-1
-DATALIST_MB59=datalist_mb59.mb-1
-DATALIST_GSF=datalist_gsf.mb-1
+DATALIST_ALL=datalist_all.mb-1                     # Name of the .all datalist
+DATALIST_MB59=datalist_mb59.mb-1                   # Name of the .mb59 datalist
+DATALIST_GSF=datalist_gsf.mb-1                     # Name of the .gsf datalist
 
-UNPROCESSED_DATALIST_ALL=unprocessed_datalist_all.mb-1
-UNPROCESSED_DATALIST_MB59=unprocessed_datalist_mb59.mb-1
-UNPROCESSED_DATALIST_GSF=unprocessed_datalist_gsf.mb-1
+MERGE_GSF_SCRIPT=merge_gsf.sh                      # Name of bash script for merging of the .gsf edits with .all files
 
-MERGE_GSF_SCRIPT=merge_gsf.sh
+SHIPTRACK_PREFIX=shiptrack                         # Prefix name for the shiptrack files
+HIPS_TIDE_PREFIX=hips_tide                         # Prefix name for the CARIS tide files
+MB_TIDE_PREFIX=mb_tide                             # Prefix name for the MB-System tide files
 
-SHIPTRACK_PREFIX=shiptrack
-HIPS_TIDE_PREFIX=hips_tide
-MB_TIDE_PREFIX=mb_tide
-
+# Name of the temporary Webtide file (normally, you should not have to edit this)
 WEBTIDE_NAME=Track_Elevation_Prediction_Time_in_GMT.html
 
-########################################################################
-# IMPORTANT NOTE ABOUT PROJECTION #
-# To use the Ocean Mapping Group's Amundsen cruise custom Lambert Conic Conformal projection, you must edit the MB-System Projections.dat file by appending the following line:
-# <user100002> +proj=lcc +lat_0=70 +lat_1=70 +lat_2=73 +lon_0=-105 +x_0=2000000 +y_0=2000000 +datum=WGS84 +units=m +no_defs <>
-#
-# After that, you can use the 'user100002' call for the PROJECTION variable. Otherwise, you may specify any other MB-System supported projection.
-#
-# The Projections.dat file should be located in the /usr/local/mb-system/share/mb-system folder but it may be elsewhere depending on your installation setup.
-########################################################################
+# Name of the Mb-System projection to use
+PROJECTION=Amundsen
 
-PROJECTION=user100002
+# Basename of the MB-System grid to create
 GRID=surface_svp_10m
+
+# Cell size of the MB-System grid
 CELLSIZE=10
+
+# Name of the projection file (will be created if not in the current directory)
 PROJ_WKT=omg.wkt

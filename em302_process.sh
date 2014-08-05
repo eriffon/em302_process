@@ -3,19 +3,26 @@
 #
 # EM302 Processing Scripts
 # Jean-Guy Nistad
-# 2014-07-09
+# 2014-08-04
 #
+# For next commit:
+#    - removed content of $DIR_DATA_MB59 only if the directory already exists;
+#    - removed the listing of unprocessed .all files;
+#    - incorporated the python script decode_nmea.py into the --track option
 #################################################################
 
 #
 # PROCESS_ALL() - Process all .all files to generate mb59 files
 #
 process_all() {
+    printf "\n\n\n\n\n" | tee -a $LOG
+    printf "###########################################################################################" | tee -a $LOG
+    printf "\n\n" | tee -a $LOG
     printf "%s UTC: Processing all .all files in directory %s.\n\n" $(date --utc +%Y%m%d-%H%M%S) $DIR_DATA_ALL | tee -a $LOG
 
     # Create the .all datalist
     printf "Creating the .all datalist." | tee -a $LOG
-    ls -1 $DIR_DATA_ALL | grep '.all$' | awk '{print $1 " 058 1.000000"}' > $DIR_DATA_ALL/$DATALIST_ALL 
+    ls -1 $DIR_DATA_ALL | grep '.all$' | awk '{print $1 " 058 1.000000"}' > $DIR_DATA_ALL/$DATALIST_ALL
     printf "done.\n" | tee -a $LOG
 
     # Create the .gsf datalist
@@ -49,11 +56,14 @@ process_all() {
     # fi
     # rm gsf_missing all_missing all_filenames gsf_filenames
 
-    # Make sure the destination directory exists. If not, create it
+    # Make sure the destination directory exists. If not, create it. If yes, erase its content
     if [ ! -d $DIR_DATA_MB59 ]; then
 	printf "No directory %s found. Creating it..." $DIR_DATA_MB59 | tee -a $LOG
 	mkdir $DIR_DATA_MB59
-	printf "done.\n"
+    else
+	printf "Cleaning the destination directory to start fresh..." | tee -a $LOG
+	rm $DIR_DATA_MB59/*
+	printf "done.\n" | tee -a $LOG
     fi
 
     # Create the merge gsf script
@@ -62,11 +72,6 @@ process_all() {
     cat all_gsf_common | awk -v dir_all=$DIR_DATA_ALL -v dir_gsf=$DIR_DATA_GSF -v dir_mb59=$DIR_DATA_MB59 \
                              '{print "mbcopy -F58/59/121 -I " dir_all "/" $1 ".all -M " dir_gsf "/" $1 ".gsf -O " dir_mb59 "/" $1 ".mb59"}' >> $MERGE_GSF_SCRIPT   
     rm all_gsf_common
-    printf "done.\n" | tee -a $LOG
-
-    # Clear the content of the directory to start with an empty directory. BE CAREFUL WITH THIS COMMAND!!!!!!!
-    printf "Cleaning the destination directory to start fresh..." | tee -a $LOG
-    rm $DIR_DATA_MB59/*
     printf "done.\n" | tee -a $LOG
 
     # run the merge gsf script
@@ -100,7 +105,7 @@ process_all() {
 }
 
 #
-# GRID() - Grid the mb59 files listed in the datalist
+# GRID(MB-system datalist) - Grid the mb59 files listed in the datalist
 #
 grid() {
     printf "%s UTC: Gridding at %s m resolution the %s MB-System datalist.\n\n" $(date --utc +%Y%m%d-%H%M%S) $CELLSIZE $1 | tee -a $LOG
@@ -122,6 +127,9 @@ dem() {
     # min=$(gdalinfo surface_10m-LCC.asc | grep 'Min=' | awk '{gsub("Min=",""); print $1}')
     # max=$(gdalinfo surface_10m-LCC.asc | grep 'Max=' | awk '{gsub("Min=",""); print $2}')
 
+    printf "\n\n\n\n\n" | tee -a $LOG
+    printf "###########################################################################################" | tee -a $LOG
+    printf "\n\n" | tee -a $LOG
     printf "%s UTC: Making a geotiff DEM using the %s color table.\n\n" $(date --utc +%Y%m%d-%H%M%S) $1 | tee -a $LOG
     # Edit the color table for MB-System
     printf "Editing the %s color table to make it compatible for MB-System..." $1 | tee -a $LOG
@@ -151,20 +159,34 @@ EOF
 }
 
 #
-# SHIPTRACK(MB-system datalist) - Create a shiptrack from an MB-System datalist
+# SHIPTRACK(MB-system datalist) - Create a 5 minute decimated shiptrack from a file containing NMEA-0183 strings
 #
 shiptrack() {
-    printf "Creating a shiptrack for the %s MB-System datalist at %s UTC..." $1 $(date --utc +%Y%m%d-%H%M%S) | tee -a $LOG
-    TIMESTAMP=$(date --utc +%Y%m%d-%H%M%S).txt
-    mbnavlist -F-1 -I $1 -D600 -OXYJ | awk '{$1=$1}1' > $DIR_SHIPTRACK/$SHIPTRACK_PREFIX-$TIMESTAMP
+    printf "\n\n\n\n\n" | tee -a $LOG
+    printf "###########################################################################################" | tee -a $LOG
+    printf "\n\n" | tee -a $LOG
+    printf "Creating a shiptrack for the %s file at %s UTC.\n" $1 $(date --utc +%Y%m%d-%H%M%S) | tee -a $LOG
+    printf "Calling decode_nmea.py...\n"
+    python decode_nmea.py $1
     printf "done.\n" | tee -a $LOG
-    printf "The shiptrack file %s was created in the %s directory\n" $SHIPTRACK_PREFIX-$TIMESTAMP $DIR_SHIPTRACK | tee -a $LOG
+
+    # I don't know how to retrieve the output filename of the python script, so I am parsing the input argument assuming I know what the output file looks like
+    date=$(echo $1 | awk '{gsub("_NMEA.txt",""); print $1}')
+    year=$(echo $date | awk '{print(substr($1,5))}')
+    month=$(echo $date | awk '{print(substr($1,3,2))}')
+    day=$(echo $date | awk '{print(substr($1,1,2))}')
+    output_file="shiptrack"-$year$month$day".txt"
+    mv $output_file $DIR_SHIPTRACK
+    printf "The shiptrack file %s was created in the %s directory\n" $output_file $DIR_SHIPTRACK | tee -a $LOG
 }
 
 #
 # WEBTIDE2CARIS() - Convert the Webtide prediction file to a CARIS HIPS & SIPS tide file
 #
 webtide2caris() {
+    printf "\n\n\n\n\n" | tee -a $LOG
+    printf "###########################################################################################" | tee -a $LOG
+    printf "\n\n" | tee -a $LOG
     printf "%s UTC: Converting the Webtide prediction file to a CARIS HIPS & SIPS tide file.\n\n" $(date --utc +%Y%m%d-%H%M%S) | tee -a $LOG
     # Check that the track prediction file exists
     printf "Checking that the Webtide file has been generated..."
@@ -196,6 +218,9 @@ webtide2caris() {
 # WEBTIDE2MB() - Convert the Webtide prediction file to a MB-System tide file
 #
 webtide2mb() {
+    printf "\n\n\n\n\n" | tee -a $LOG
+    printf "###########################################################################################" | tee -a $LOG
+    printf "\n\n" | tee -a $LOG
     printf "%s UTC: Converting the Webtide prediction file to a MB-System tide file\n\n" $(date --utc +%Y%m%d-%H%M%S) | tee -a $LOG
     # Check that the track prediction file exists
     printf "Checking that the Webtide file has been generated..."
@@ -273,7 +298,7 @@ eval set -- "$OPTS"
 
 while true ; do
     case "$1" in
-        -h) printf "Usage: $0 [--all] [--grid DATALIST] [--dem COLORTABLE] [--track DATALIST] [--tide-for-HIPS] [--tide-for-MB] [--help]\n";
+        -h) printf "Usage: $0 [--all] [--grid DATALIST] [--dem COLORTABLE] [--track NMEA_LOGGER FILE] [--tide-for-HIPS] [--tide-for-MB] [--help]\n";
 	    shift;;
 
         --all)
