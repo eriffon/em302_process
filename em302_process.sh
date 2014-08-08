@@ -3,19 +3,23 @@
 #
 # EM302 Processing Scripts
 # Jean-Guy Nistad
-# 2014-08-04
+# 2014-08-06
 #
 # For next commit:
-#    - removed content of $DIR_DATA_MB59 only if the directory already exists;
-#    - removed the listing of unprocessed .all files;
-#    - incorporated the python script decode_nmea.py into the --track option
+#    - Corrected help display
+#    - Removed the commented section about the display of unprocessed files
+#    - In shiptrack, added the decoding of a complete filepath in case this is entered by the user instead of a file in the current directory. Must still check why decode_nmea.py does not seem
+#      to work.
+#    - Modified the look of the parameters.dat file.
+#    - Changed output from ESRI ASCII grid to ESRI grid (EHdr)
+#    - shiptrack() now relies on the path to the NMEA_logger folder in the parameters.dat file
 #################################################################
 
 #
 # PROCESS_ALL() - Process all .all files to generate mb59 files
 #
 process_all() {
-    printf "\n\n\n\n\n" | tee -a $LOG
+    printf "\n\n\n" | tee -a $LOG
     printf "###########################################################################################" | tee -a $LOG
     printf "\n\n" | tee -a $LOG
     printf "%s UTC: Processing all .all files in directory %s.\n\n" $(date --utc +%Y%m%d-%H%M%S) $DIR_DATA_ALL | tee -a $LOG
@@ -45,16 +49,6 @@ process_all() {
 	printf "Missing .gsf file(s)! Consider editing in CARIS HIPS & SIPS and exporting a .gsf for the following files:\n" | tee -a $LOG
 	cat gsf_missing | awk '{print $1 ".gsf"}' | tee -a $LOG
     fi
-
-    # Identify the missing .all files
-    # NOTE: This section has been commented out because it's probably not necessary to display all the .all files not being processed.
-    # comm -13 all_filenames gsf_filenames > all_missing
-    # if [ -s "all_missing" ]
-    # then
-	# printf "The following .gsf files will not be merged:\n" | tee -a $LOG
-	# cat all_missing | awk '{print $1 ".all"}' | tee -a $LOG
-    # fi
-    # rm gsf_missing all_missing all_filenames gsf_filenames
 
     # Make sure the destination directory exists. If not, create it. If yes, erase its content
     if [ ! -d $DIR_DATA_MB59 ]; then
@@ -110,9 +104,9 @@ process_all() {
 grid() {
     printf "%s UTC: Gridding at %s m resolution the %s MB-System datalist.\n\n" $(date --utc +%Y%m%d-%H%M%S) $CELLSIZE $1 | tee -a $LOG
     # Make a NetCDF grid
-    printf "Making an ASCII ESRI grid...\n" | tee -a $LOG
+    printf "Making an ESRI grid...\n" | tee -a $LOG
     mbgrid -A1 -I $1 -J$PROJECTION -G4 -N -V -O $DIR_SURFACES/$GRID -E$CELLSIZE/0.0/meters!
-    gdal_translate -of AAIGrid -a_srs $PROJ_WKT $DIR_SURFACES/$GRID.asc $DIR_SURFACES/$GRID-LCC.asc
+    gdal_translate -of EHdr -a_srs $PROJ_WKT $DIR_SURFACES/$GRID.asc $DIR_SURFACES/$GRID-LCC.flt
     rm $DIR_SURFACES/$GRID.asc     # Comment out for debugging
     printf "done.\n" | tee -a $LOG
 }
@@ -127,7 +121,7 @@ dem() {
     # min=$(gdalinfo surface_10m-LCC.asc | grep 'Min=' | awk '{gsub("Min=",""); print $1}')
     # max=$(gdalinfo surface_10m-LCC.asc | grep 'Max=' | awk '{gsub("Min=",""); print $2}')
 
-    printf "\n\n\n\n\n" | tee -a $LOG
+    printf "\n\n\n" | tee -a $LOG
     printf "###########################################################################################" | tee -a $LOG
     printf "\n\n" | tee -a $LOG
     printf "%s UTC: Making a geotiff DEM using the %s color table.\n\n" $(date --utc +%Y%m%d-%H%M%S) $1 | tee -a $LOG
@@ -141,12 +135,12 @@ EOF
 
     # Make the relief geotiff
     printf "Making a relief geotiff..."
-    gdaldem color-relief $DIR_SURFACES/$GRID-LCC.asc $mbcolortable $DIR_SURFACES/$GRID-relief-LCC.tif -of GTiff
+    gdaldem color-relief $DIR_SURFACES/$GRID-LCC.flt $mbcolortable $DIR_SURFACES/$GRID-relief-LCC.tif -of GTiff
     printf "done.\n" | tee -a $LOG
 
     # Make a hillshade geoTIFF
     printf "Making a hillshade geoTIFF..." | tee -a $LOG
-    gdaldem hillshade $DIR_SURFACES/$GRID-LCC.asc $DIR_SURFACES/$GRID-hillshade-LCC.tif -of GTiff
+    gdaldem hillshade $DIR_SURFACES/$GRID-LCC.flt $DIR_SURFACES/$GRID-hillshade-LCC.tif -of GTiff
     printf "done.\n" | tee -a $LOG
 
     # Merge the relief and hillshade geoTIFF
@@ -159,18 +153,28 @@ EOF
 }
 
 #
-# SHIPTRACK(MB-system datalist) - Create a 5 minute decimated shiptrack from a file containing NMEA-0183 strings
+# SHIPTRACK(NMEA_logger file) - Create a 5 minute decimated shiptrack from a file containing NMEA-0183 strings
 #
 shiptrack() {
-    printf "\n\n\n\n\n" | tee -a $LOG
+    printf "\n\n\n" | tee -a $LOG
     printf "###########################################################################################" | tee -a $LOG
     printf "\n\n" | tee -a $LOG
-    printf "Creating a shiptrack for the %s file at %s UTC.\n" $1 $(date --utc +%Y%m%d-%H%M%S) | tee -a $LOG
+    printf "UTC %s: Creating a shiptrack for the %s file.\n" $(date --utc +%Y%m%d-%H%M%S) $1 | tee -a $LOG
+
+    # Check if the specified file exists
+    if [ ! -f $NMEA/$1 ]; then
+	printf "Error! The file %s was not found!\n" $1
+	printf "Please check the filename or that the path %s specified in the parameters.dat file is correct.\n" $NMEA
+	exit 1
+    fi
+
     printf "Calling decode_nmea.py...\n"
-    python decode_nmea.py $1
+    # I made a python script because if has good support for time series with the pandas library
+    python decode_nmea_v4.py $NMEA/$1
     printf "done.\n" | tee -a $LOG
 
     # I don't know how to retrieve the output filename of the python script, so I am parsing the input argument assuming I know what the output file looks like
+    filename=$(echo $1 | awk '{print filename[(split($1,filename,"/"))]}')
     date=$(echo $1 | awk '{gsub("_NMEA.txt",""); print $1}')
     year=$(echo $date | awk '{print(substr($1,5))}')
     month=$(echo $date | awk '{print(substr($1,3,2))}')
@@ -184,7 +188,7 @@ shiptrack() {
 # WEBTIDE2CARIS() - Convert the Webtide prediction file to a CARIS HIPS & SIPS tide file
 #
 webtide2caris() {
-    printf "\n\n\n\n\n" | tee -a $LOG
+    printf "\n\n\n" | tee -a $LOG
     printf "###########################################################################################" | tee -a $LOG
     printf "\n\n" | tee -a $LOG
     printf "%s UTC: Converting the Webtide prediction file to a CARIS HIPS & SIPS tide file.\n\n" $(date --utc +%Y%m%d-%H%M%S) | tee -a $LOG
@@ -218,7 +222,7 @@ webtide2caris() {
 # WEBTIDE2MB() - Convert the Webtide prediction file to a MB-System tide file
 #
 webtide2mb() {
-    printf "\n\n\n\n\n" | tee -a $LOG
+    printf "\n\n\n" | tee -a $LOG
     printf "###########################################################################################" | tee -a $LOG
     printf "\n\n" | tee -a $LOG
     printf "%s UTC: Converting the Webtide prediction file to a MB-System tide file\n\n" $(date --utc +%Y%m%d-%H%M%S) | tee -a $LOG
@@ -326,12 +330,12 @@ while true ; do
 	    shift;;
 
 	--help) 
-	    printf "Usage: $0 [--all] [--grid DATALIST] [--dem COLORTABLE] [--track DATALIST] [--tide-for-HIPS] [tide-for-MB] [--help]\n\n"
+	    printf "Usage: $0 [--all] [--grid DATALIST] [--dem COLORTABLE] [--track NMEA_LOGGER FILE] [--tide-for-HIPS] [tide-for-MB] [--help]\n\n"
 	    printf "** DESCRIPTION:\n"
 	    printf "Use the --all option to process all .all files.\n"
 	    printf "Use the --grid option to grid the data from the specified MB-system datalist.\n"
 	    printf "Use the --dem option to create a final dem with the specified color table. Note that the color table must have been generated by QGIS!\n"
-	    printf "Use the --track option to create a shiptrack from the specified MB-system datalist.\n"
+	    printf "Use the --track option to create a shiptrack from the specified NMEA_logger file.\n"
 	    printf "Use the --tide-for-HIPS option to create a CARIS HIPS & SIPS tide file with the Webtide file Track Elevation Prediction (Time in GMT).html located in %s.\n" $DIR_WEBTIDE
 	    printf "Use the --tide-for-MB option to create a MB-System file with the Webtide file Track Elevation Prediction (Time in GMT).html located in %s.\n" $DIR_WEBTIDE
 	    shift;;
