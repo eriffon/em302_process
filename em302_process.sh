@@ -2,17 +2,19 @@
 ##################################################################
 #
 # EM302 Processing Scripts
-# Jean-Guy Nistad
-# 2014-08-06
+# AUTHOR: Jean-Guy Nistad
+# VERSION: 8
+# DATE: 2014-08-09
 #
 # For next commit:
 #    - Corrected help display
 #    - Removed the commented section about the display of unprocessed files
-#    - In shiptrack, added the decoding of a complete filepath in case this is entered by the user instead of a file in the current directory. Must still check why decode_nmea.py does not seem
-#      to work.
+#    - In shiptrack, added the decoding of a complete filepath in case this is entered by the user instead of a file in the current directory.
 #    - Modified the look of the parameters.dat file.
 #    - Changed output from ESRI ASCII grid to ESRI grid (EHdr)
 #    - shiptrack() now relies on the path to the NMEA_logger folder in the parameters.dat file
+#    - in dem(), corrected a bug with the creation of the color table that made gdaldem color-relief fail.
+#    - in grid(), changed the gridding algorith from Gaussian Weighted Mean to Beam Footprint
 #################################################################
 
 #
@@ -105,7 +107,7 @@ grid() {
     printf "%s UTC: Gridding at %s m resolution the %s MB-System datalist.\n\n" $(date --utc +%Y%m%d-%H%M%S) $CELLSIZE $1 | tee -a $LOG
     # Make a NetCDF grid
     printf "Making an ESRI grid...\n" | tee -a $LOG
-    mbgrid -A1 -I $1 -J$PROJECTION -G4 -N -V -O $DIR_SURFACES/$GRID -E$CELLSIZE/0.0/meters!
+    mbgrid -A1 -I $1 -J$PROJECTION -F5 -G4 -N -V -O $DIR_SURFACES/$GRID -E$CELLSIZE/0.0/meters!
     gdal_translate -of EHdr -a_srs $PROJ_WKT $DIR_SURFACES/$GRID.asc $DIR_SURFACES/$GRID-LCC.flt
     rm $DIR_SURFACES/$GRID.asc     # Comment out for debugging
     printf "done.\n" | tee -a $LOG
@@ -127,20 +129,20 @@ dem() {
     printf "%s UTC: Making a geotiff DEM using the %s color table.\n\n" $(date --utc +%Y%m%d-%H%M%S) $1 | tee -a $LOG
     # Edit the color table for MB-System
     printf "Editing the %s color table to make it compatible for MB-System..." $1 | tee -a $LOG
-    cat >> $1 << EOF
+    tail -n +3 $1 > mbcolortable
+    cat >> mbcolortable << EOF
 nv,255,255,255,255
 EOF
-    tail -n +3 $1 > mbcolortable
     printf "done.\n"
 
     # Make the relief geotiff
     printf "Making a relief geotiff..."
-    gdaldem color-relief $DIR_SURFACES/$GRID-LCC.flt $mbcolortable $DIR_SURFACES/$GRID-relief-LCC.tif -of GTiff
+    gdaldem color-relief $DIR_SURFACES/$GRID-LCC.flt mbcolortable $DIR_SURFACES/$GRID-relief-LCC.tif -of GTiff
     printf "done.\n" | tee -a $LOG
 
-    # Make a hillshade geoTIFF
+    # Make a hillshade geoTIFF (3x vertical exaggeration)
     printf "Making a hillshade geoTIFF..." | tee -a $LOG
-    gdaldem hillshade $DIR_SURFACES/$GRID-LCC.flt $DIR_SURFACES/$GRID-hillshade-LCC.tif -of GTiff
+    gdaldem hillshade $DIR_SURFACES/$GRID-LCC.flt $DIR_SURFACES/$GRID-hillshade-LCC.tif -z 3 -of GTiff
     printf "done.\n" | tee -a $LOG
 
     # Merge the relief and hillshade geoTIFF
@@ -149,7 +151,7 @@ EOF
     printf "done.\n" | tee -a $LOG
 
     # clean up
-    rm $DIR_SURFACES/$GRID-relief-LCC.tif $DIR_SURFACES/$GRID-hillshade-LCC.tif $mbcolortable
+    rm $DIR_SURFACES/$GRID-relief-LCC.tif $DIR_SURFACES/$GRID-hillshade-LCC.tif mbcolortable
 }
 
 #
@@ -170,7 +172,7 @@ shiptrack() {
 
     printf "Calling decode_nmea.py...\n"
     # I made a python script because if has good support for time series with the pandas library
-    python decode_nmea_v4.py $NMEA/$1
+    python decode_nmea.py $NMEA/$1
     printf "done.\n" | tee -a $LOG
 
     # I don't know how to retrieve the output filename of the python script, so I am parsing the input argument assuming I know what the output file looks like
