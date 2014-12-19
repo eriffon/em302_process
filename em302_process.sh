@@ -3,11 +3,10 @@
 #
 # EM302 Processing Scripts
 # AUTHOR: Jean-Guy Nistad
-# VERSION: 9
+# VERSION: 10
 # DATE: 2014-12-19
 #
 # For next commit:
-#    - Apply the modification of Gabriel Joyal
 #
 # Future improvements:
 #    - As the merge_gsh.sh runs, print the command that is being run at the standard out and in the log file.
@@ -109,6 +108,7 @@ grid() {
     printf "Making an ESRI grid...\n" | tee -a $LOG
     mbgrid -A1 -I $1 -J$PROJECTION -C3 -F5 -G4 -N -V -O $DIR_SURFACES/$GRID -E$CELLSIZE/0.0/meters!
     gdal_translate -of EHdr -a_srs $PROJ_WKT $DIR_SURFACES/$GRID.asc $DIR_SURFACES/$GRID-LCC.flt
+    gdal_calc.py -A $DIR_SURFACES/$GRID-LCC.flt --outfile=$DIR_SURFACES/$GRID-LCC_neg.flt --calc="-1*A"
     rm $DIR_SURFACES/$GRID.asc     # Comment out for debugging
     printf "done.\n" | tee -a $LOG
 }
