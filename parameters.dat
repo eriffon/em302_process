@@ -39,7 +39,7 @@ DIR_MB_TIDE=$DIR_ROOT/tide
 DIR_SURFACES=$DIR_ROOT/surfaces
 
 # Path the the NMEA_logger files
-NMEA=/home/jgnistad/Programmation/Python/Decode_NMEA              
+NMEA=/home/jgnistad/Projets/Personnels/13-17-ArcticNet/Technical/Acquisition/NMEA_logger
 
 ###################### FILENAME LISTING ###############################
 

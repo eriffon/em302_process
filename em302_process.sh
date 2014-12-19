@@ -3,18 +3,14 @@
 #
 # EM302 Processing Scripts
 # AUTHOR: Jean-Guy Nistad
-# VERSION: 8
-# DATE: 2014-08-09
+# VERSION: 9
+# DATE: 2014-12-19
 #
 # For next commit:
-#    - Corrected help display
-#    - Removed the commented section about the display of unprocessed files
-#    - In shiptrack, added the decoding of a complete filepath in case this is entered by the user instead of a file in the current directory.
-#    - Modified the look of the parameters.dat file.
-#    - Changed output from ESRI ASCII grid to ESRI grid (EHdr)
-#    - shiptrack() now relies on the path to the NMEA_logger folder in the parameters.dat file
-#    - in dem(), corrected a bug with the creation of the color table that made gdaldem color-relief fail.
-#    - in grid(), changed the gridding algorith from Gaussian Weighted Mean to Beam Footprint
+#    - Apply the modification of Gabriel Joyal
+#
+# Future improvements:
+#    - As the merge_gsh.sh runs, print the command that is being run at the standard out and in the log file.
 #################################################################
 
 #
@@ -56,6 +52,7 @@ process_all() {
     if [ ! -d $DIR_DATA_MB59 ]; then
 	printf "No directory %s found. Creating it..." $DIR_DATA_MB59 | tee -a $LOG
 	mkdir $DIR_DATA_MB59
+	printf "done.\n" | tee -a $LOG
     else
 	printf "Cleaning the destination directory to start fresh..." | tee -a $LOG
 	rm $DIR_DATA_MB59/*
@@ -98,6 +95,9 @@ process_all() {
     printf "Creating the processed .mb59 datalist..." | tee -a $LOG
     ls -1 $DIR_DATA_MB59 | grep 'f.mb59$' | awk '{print $1 " 59 1.000000"}' > $DIR_DATA_MB59/$DATALIST_MB59
     printf "done.\n" | tee -a $LOG
+
+    # Clean up the temporary listings
+    rm all_filenames gsf_filenames gsf_missing
 }
 
 #
@@ -107,7 +107,7 @@ grid() {
     printf "%s UTC: Gridding at %s m resolution the %s MB-System datalist.\n\n" $(date --utc +%Y%m%d-%H%M%S) $CELLSIZE $1 | tee -a $LOG
     # Make a NetCDF grid
     printf "Making an ESRI grid...\n" | tee -a $LOG
-    mbgrid -A1 -I $1 -J$PROJECTION -F5 -G4 -N -V -O $DIR_SURFACES/$GRID -E$CELLSIZE/0.0/meters!
+    mbgrid -A1 -I $1 -J$PROJECTION -C3 -F5 -G4 -N -V -O $DIR_SURFACES/$GRID -E$CELLSIZE/0.0/meters!
     gdal_translate -of EHdr -a_srs $PROJ_WKT $DIR_SURFACES/$GRID.asc $DIR_SURFACES/$GRID-LCC.flt
     rm $DIR_SURFACES/$GRID.asc     # Comment out for debugging
     printf "done.\n" | tee -a $LOG
