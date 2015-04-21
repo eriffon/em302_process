@@ -15,10 +15,10 @@
 DIR_ROOT=$(pwd)
 
 # Path to the .all files to read
-DIR_DATA_ALL=$DIR_ROOT/all/PT-time-pitch-yaw
+DIR_DATA_ALL=$DIR_ROOT/all/2015
 
 # Path to where the .mb59 files should be written
-DIR_DATA_MB59=$DIR_ROOT/mb59/PT-time-pitch-yaw     
+DIR_DATA_MB59=$DIR_ROOT/mb59/2015
 
 # Path to the .gsf files should be read
 DIR_DATA_GSF=$DIR_ROOT/gsf
@@ -50,7 +50,10 @@ LOG=log.txt
 DATALIST_ALL=datalist_all.mb-1                     
 
 # Name of the .mb59 MB-System datalist
-DATALIST_MB59=datalist_mb59.mb-1                   
+DATALIST_MB59=datalist_mb59.mb-1
+
+# Name of the processed .mb59 MB-System datalist
+DATALISTP_MB59=datalistp_mb59.mb-1
 
 # Name of the .gsf MB-System datalist
 DATALIST_GSF=datalist_gsf.mb-1                     
@@ -76,8 +79,11 @@ PROJECTION=Amundsen
 # Basename of the MB-System grid to create
 GRID=calibration
 
-# Cell size of the MB-System grid
-CELLSIZE=2
-
 # Name of the projection file (will be created if not in the current directory)
 PROJ_WKT=omg.wkt
+
+###################### OPTION LISTING ###############################
+
+# Cell size of the MB-System grid
+CELLSIZE=10
+

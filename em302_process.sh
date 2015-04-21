@@ -1,15 +1,16 @@
 #!/bin/bash
 ##################################################################
 #
-# EM302 Processing Scripts
+# EM302 Processing Scripts for CCGS Amundsen Data
 # AUTHOR: Jean-Guy Nistad
-# VERSION: 10
-# DATE: 2014-12-19
+# VERSION: 11
+# DATE: 2015-04-20
 #
 # For next commit:
 #
 # Future improvements:
 #    - As the merge_gsh.sh runs, print the command that is being run at the standard out and in the log file.
+#    - Make the merg_gsf.sh script optional if one does not process using CARIS HIPS & SIPS
 #################################################################
 
 #
@@ -26,28 +27,7 @@ process_all() {
     ls -1 $DIR_DATA_ALL | grep '.all$' | awk '{print $1 " 058 1.000000"}' > $DIR_DATA_ALL/$DATALIST_ALL
     printf "done.\n" | tee -a $LOG
 
-    # Create the .gsf datalist
-    printf "Creating the .gsf datalist..." | tee -a $LOG
-    ls -1 $DIR_DATA_GSF | grep '.gsf$' | awk '{print $1 " 121 1.000000"}' > $DIR_DATA_GSF/$DATALIST_GSF
-    printf "done.\n" | tee -a $LOG
-
-    # Compare the listing of .all files and .gsf files.
-    printf "Comparing the .all and .gsf file listing..." | tee -a $LOG
-    cat $DIR_DATA_ALL/$DATALIST_ALL | awk -F '.' '{print $1}' > all_filenames
-    cat $DIR_DATA_GSF/$DATALIST_GSF | awk -F '.' '{print $1}' > gsf_filenames
-    # Identify the common .all and .gsf files and make a filename listing (with no extension)
-    comm -12 all_filenames gsf_filenames > all_gsf_common 
-    printf "done.\n" | tee -a $LOG
-    
-    # Identify the missing .gsf files
-    comm -23 all_filenames gsf_filenames > gsf_missing
-    if [ -s "gsf_missing" ]
-    then
-	printf "Missing .gsf file(s)! Consider editing in CARIS HIPS & SIPS and exporting a .gsf for the following files:\n" | tee -a $LOG
-	cat gsf_missing | awk '{print $1 ".gsf"}' | tee -a $LOG
-    fi
-
-    # Make sure the destination directory exists. If not, create it. If yes, erase its content
+    # Make sure the .mb59 destination directory exists. If not, create it. If yes, erase its content
     if [ ! -d $DIR_DATA_MB59 ]; then
 	printf "No directory %s found. Creating it..." $DIR_DATA_MB59 | tee -a $LOG
 	mkdir $DIR_DATA_MB59
@@ -58,12 +38,44 @@ process_all() {
 	printf "done.\n" | tee -a $LOG
     fi
 
+    # Preprocess the .all files and create original .mb59 files
+    printf "Running mbkongsbergpreprocess..." | tee -a $LOG
+    mbkongsbergpreprocess -C -F-1 -I $DIR_DATA_ALL/$DATALIST_ALL -D $DIR_DATA_MB59 | tee -a $LOG
+    printf "done.\n" | tee -a $LOG
+
+    # Create the original .mb59 datalist
+    printf "Creating the .mb59 datalist..." | tee -a $LOG
+    ls -1 $DIR_DATA_MB59 | grep '.mb59$' | awk '{print $1 " 59 1.000000"}' > $DIR_DATA_MB59/$DATALIST_MB59
+    printf "done.\n" | tee -a $LOG
+    
+    # Create the .gsf datalist produced from CARIS HIPS & SIPS
+    printf "Creating the .gsf datalist..." | tee -a $LOG
+    ls -1 $DIR_DATA_GSF | grep '.gsf$' | awk '{print $1 " 121 1.000000"}' > $DIR_DATA_GSF/$DATALIST_GSF
+    printf "done.\n" | tee -a $LOG
+
+    # Compare the listing of .mb59 files and .gsf files
+    printf "Comparing the .mb59 and .gsf file listing..." | tee -a $LOG
+    cat $DIR_DATA_MB59/$DATALIST_MB59 | awk -F '.' '{print $1}' > mb59_filenames
+    cat $DIR_DATA_GSF/$DATALIST_GSF | awk -F '.' '{print $1}' > gsf_filenames
+    # Identify the common .mb59 and .gsf files and make a filename listing (with no extension)
+    comm -12 mb59_filenames gsf_filenames > mb59_gsf_common 
+    printf "done.\n" | tee -a $LOG
+    
+    # Identify the missing .gsf files
+    comm -23 mb59_filenames gsf_filenames > gsf_missing
+    if [ -s "gsf_missing" ]
+    then
+	printf "Missing .gsf file(s)! Consider editing in CARIS HIPS & SIPS and exporting a .gsf for the following files:\n" | tee -a $LOG
+	cat gsf_missing | awk '{print $1 ".gsf"}' | tee -a $LOG
+    fi
+
     # Create the merge gsf script
     printf "Creating the mbcopy script file..." | tee -a $LOG
     touch $MERGE_GSF_SCRIPT | printf "#!/bin/bash\n\n" > $MERGE_GSF_SCRIPT
-    cat all_gsf_common | awk -v dir_all=$DIR_DATA_ALL -v dir_gsf=$DIR_DATA_GSF -v dir_mb59=$DIR_DATA_MB59 \
-                             '{print "mbcopy -F58/59/121 -I " dir_all "/" $1 ".all -M " dir_gsf "/" $1 ".gsf -O " dir_mb59 "/" $1 ".mb59"}' >> $MERGE_GSF_SCRIPT   
-    rm all_gsf_common
+    cat mb59_gsf_common | awk -v dir_mb59=$DIR_DATA_MB59 -v dir_gsf=$DIR_DATA_GSF \
+                              '{print "mbcopy -F59/59/121 -I " dir_mb59 "/" $1 ".mb59 -M " dir_gsf "/" $1 ".gsf -O " dir_mb59 "/" $1 "f.mb59\n" \
+                                      "rm " dir_mb59 "/" $1 ".mb59\n" \
+                                      "mv " dir_mb59 "/" $1 "f.mb59 " dir_mb59 "/" $1 ".mb59"}' >> $MERGE_GSF_SCRIPT
     printf "done.\n" | tee -a $LOG
 
     # run the merge gsf script
@@ -72,31 +84,23 @@ process_all() {
     source $MERGE_GSF_SCRIPT
     printf "done.\n" | tee -a $LOG
 
-    # Create the .mb59 datalist
-    printf "Creating the .mb59 datalist..." | tee -a $LOG
-    ls -1 $DIR_DATA_MB59 | grep '.mb59$' | awk '{print $1 " 59 1.000000"}' > $DIR_DATA_MB59/$DATALIST_MB59
+    # Quick clean with mbclean
+    printf "Doing a quick clean with mbclean..." | tee -a $LOG
+    mbclean -I $DIR_DATA_MB59/$DATALIST_MB59 -M4 -C10
     printf "done.\n" | tee -a $LOG
 
-    # Running mbkongsbergpreprocess on .mb59 files
-    printf "Running mbkongsbergpreprocess..." | tee -a $LOG
-    mbkongsbergpreprocess -C -F-1 -I $DIR_DATA_MB59/$DATALIST_MB59 | tee -a $LOG
-    printf "done.\n" | tee -a $LOG
-
-    # Remove the original mb59 files
-    printf "Removing the unprocessed .mb59 files..." | tee -a $LOG
-    cat $DIR_DATA_MB59/$DATALIST_MB59 | awk -v dir_mb59=$DIR_DATA_MB59 '{print "rm " dir_mb59 "/" $1}' > remove_mb59
-    chmod u+x remove_mb59
-    source remove_mb59
-    rm remove_mb59
-    printf "done.\n" | tee -a $LOG
-
-    # Create the processed .mb59 datalist
+    # Create the processed mb59 files
+    printf "Creating processed .mb59 files..." | tee -a $LOG
+    mbprocess -I $DIR_DATA_MB59/$DATALIST_MB59
+    printf "...Done creating the processed mb59 files.\n" | tee -a $LOG
+    
+    # Create the processed mb59 datalist
     printf "Creating the processed .mb59 datalist..." | tee -a $LOG
-    ls -1 $DIR_DATA_MB59 | grep 'f.mb59$' | awk '{print $1 " 59 1.000000"}' > $DIR_DATA_MB59/$DATALIST_MB59
+    printf "\$PROCESSED\n%s" > $DATALISTP_MB59
     printf "done.\n" | tee -a $LOG
-
+    
     # Clean up the temporary listings
-    rm all_filenames gsf_filenames gsf_missing
+    rm mb59_filenames gsf_filenames gsf_missing mb59_gsf_common
 }
 
 #
