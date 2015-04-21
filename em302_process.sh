@@ -3,7 +3,7 @@
 #
 # EM302 Processing Scripts for CCGS Amundsen Data
 # AUTHOR: Jean-Guy Nistad
-# VERSION: 11
+# VERSION: 12
 # DATE: 2015-04-20
 #
 # For next commit:
@@ -96,7 +96,7 @@ process_all() {
     
     # Create the processed mb59 datalist
     printf "Creating the processed .mb59 datalist..." | tee -a $LOG
-    printf "\$PROCESSED\n%s" > $DATALISTP_MB59
+    printf "\$PROCESSED\n%s\n" > $DIR_DATA_MB59/$DATALISTP_MB59
     printf "done.\n" | tee -a $LOG
     
     # Clean up the temporary listings
