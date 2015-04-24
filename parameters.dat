@@ -15,10 +15,10 @@
 DIR_ROOT=$(pwd)
 
 # Path to the .all files to read
-DIR_DATA_ALL=$DIR_ROOT/all/2015
+DIR_DATA_ALL=$DIR_ROOT/all/PT-roll
 
 # Path to where the .mb59 files should be written
-DIR_DATA_MB59=$DIR_ROOT/mb59/2015
+DIR_DATA_MB59=$DIR_ROOT/mb59/PT-roll
 
 # Path to the .gsf files should be read
 DIR_DATA_GSF=$DIR_ROOT/gsf
@@ -49,8 +49,14 @@ LOG=log.txt
 # Name of the .all MB-System datalist
 DATALIST_ALL=datalist_all.mb-1                     
 
+# NAME of the update .all MB-System datalist
+DATALIST_UPDATE_ALL=datalist_update_all.mb-1
+
 # Name of the .mb59 MB-System datalist
 DATALIST_MB59=datalist_mb59.mb-1
+
+# NAME of the update .mb59 MB-System datalist
+DATALIST_UPDATE_MB59=datalist_update_mb59.mb-1
 
 # Name of the processed .mb59 MB-System datalist
 DATALISTP_MB59=datalistp_mb59.mb-1

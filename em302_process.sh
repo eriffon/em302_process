@@ -3,8 +3,8 @@
 #
 # EM302 Processing Scripts for CCGS Amundsen Data
 # AUTHOR: Jean-Guy Nistad
-# VERSION: 12
-# DATE: 2015-04-20
+# VERSION: 13
+# DATE: 2015-04-24
 #
 # For next commit:
 #
@@ -13,41 +13,11 @@
 #    - Make the merg_gsf.sh script optional if one does not process using CARIS HIPS & SIPS
 #################################################################
 
+
 #
-# PROCESS_ALL() - Process all .all files to generate mb59 files
+# MERGE_EDITS() - Merge edits from .gsf files produced from CARIS HIPS & SIPS
 #
-process_all() {
-    printf "\n\n\n" | tee -a $LOG
-    printf "###########################################################################################" | tee -a $LOG
-    printf "\n\n" | tee -a $LOG
-    printf "%s UTC: Processing all .all files in directory %s.\n\n" $(date --utc +%Y%m%d-%H%M%S) $DIR_DATA_ALL | tee -a $LOG
-
-    # Create the .all datalist
-    printf "Creating the .all datalist." | tee -a $LOG
-    ls -1 $DIR_DATA_ALL | grep '.all$' | awk '{print $1 " 058 1.000000"}' > $DIR_DATA_ALL/$DATALIST_ALL
-    printf "done.\n" | tee -a $LOG
-
-    # Make sure the .mb59 destination directory exists. If not, create it. If yes, erase its content
-    if [ ! -d $DIR_DATA_MB59 ]; then
-	printf "No directory %s found. Creating it..." $DIR_DATA_MB59 | tee -a $LOG
-	mkdir $DIR_DATA_MB59
-	printf "done.\n" | tee -a $LOG
-    else
-	printf "Cleaning the destination directory to start fresh..." | tee -a $LOG
-	rm $DIR_DATA_MB59/*
-	printf "done.\n" | tee -a $LOG
-    fi
-
-    # Preprocess the .all files and create original .mb59 files
-    printf "Running mbkongsbergpreprocess..." | tee -a $LOG
-    mbkongsbergpreprocess -C -F-1 -I $DIR_DATA_ALL/$DATALIST_ALL -D $DIR_DATA_MB59 | tee -a $LOG
-    printf "done.\n" | tee -a $LOG
-
-    # Create the original .mb59 datalist
-    printf "Creating the .mb59 datalist..." | tee -a $LOG
-    ls -1 $DIR_DATA_MB59 | grep '.mb59$' | awk '{print $1 " 59 1.000000"}' > $DIR_DATA_MB59/$DATALIST_MB59
-    printf "done.\n" | tee -a $LOG
-    
+merge_edits() {
     # Create the .gsf datalist produced from CARIS HIPS & SIPS
     printf "Creating the .gsf datalist..." | tee -a $LOG
     ls -1 $DIR_DATA_GSF | grep '.gsf$' | awk '{print $1 " 121 1.000000"}' > $DIR_DATA_GSF/$DATALIST_GSF
@@ -55,8 +25,9 @@ process_all() {
 
     # Compare the listing of .mb59 files and .gsf files
     printf "Comparing the .mb59 and .gsf file listing..." | tee -a $LOG
-    cat $DIR_DATA_MB59/$DATALIST_MB59 | awk -F '.' '{print $1}' > mb59_filenames
+    cat $DIR_DATA_MB59/$1 | awk -F '.' '{print $1}' > mb59_filenames
     cat $DIR_DATA_GSF/$DATALIST_GSF | awk -F '.' '{print $1}' > gsf_filenames
+    
     # Identify the common .mb59 and .gsf files and make a filename listing (with no extension)
     comm -12 mb59_filenames gsf_filenames > mb59_gsf_common 
     printf "done.\n" | tee -a $LOG
@@ -84,6 +55,49 @@ process_all() {
     source $MERGE_GSF_SCRIPT
     printf "done.\n" | tee -a $LOG
 
+    # Clean up the temporary listings
+    rm mb59_filenames gsf_filenames gsf_missing mb59_gsf_common
+}
+
+
+#
+# CONVERT_ALL() - Convert all .all files to generate mb59 files
+#
+convert_all() {
+    printf "\n\n\n" | tee -a $LOG
+    printf "###########################################################################################" | tee -a $LOG
+    printf "\n\n" | tee -a $LOG
+    printf "%s UTC: Converting all .all files in directory %s.\n\n" $(date --utc +%Y%m%d-%H%M%S) $DIR_DATA_ALL | tee -a $LOG
+
+    # Create the .all datalist
+    printf "Creating the .all datalist..." | tee -a $LOG
+    ls -1 $DIR_DATA_ALL | grep '.all$' | awk '{print $1 " 058 1.000000"}' > $DIR_DATA_ALL/$DATALIST_ALL
+    printf "done.\n" | tee -a $LOG
+
+    # Make sure the .mb59 destination directory exists. If not, create it. If yes, erase its content
+    if [ ! -d $DIR_DATA_MB59 ]; then
+	printf "No directory %s found. Creating it..." $DIR_DATA_MB59 | tee -a $LOG
+	mkdir $DIR_DATA_MB59
+	printf "done.\n" | tee -a $LOG
+    else
+	printf "Cleaning the destination directory to start fresh..." | tee -a $LOG
+	rm $DIR_DATA_MB59/*
+	printf "done.\n" | tee -a $LOG
+    fi
+
+    # Preprocess the .all files and create unprocessed .mb59 files
+    printf "Running mbkongsbergpreprocess..." | tee -a $LOG
+    mbkongsbergpreprocess -C -F-1 -I $DIR_DATA_ALL/$DATALIST_ALL -D $DIR_DATA_MB59 | tee -a $LOG
+    printf "done.\n" | tee -a $LOG
+
+    # Create the datalist for unprocessed .mb59
+    printf "Creating the .mb59 datalist..." | tee -a $LOG
+    ls -1 $DIR_DATA_MB59 | grep '.mb59$' | awk '{print $1 " 59 1.000000"}' > $DIR_DATA_MB59/$DATALIST_MB59
+    printf "done.\n" | tee -a $LOG
+
+    # Merge edits from CARIS HIPS & SIPS
+    merge_edits $DATALIST_MB59
+    
     # Quick clean with mbclean
     printf "Doing a quick clean with mbclean..." | tee -a $LOG
     mbclean -I $DIR_DATA_MB59/$DATALIST_MB59 -M4 -C10
@@ -93,16 +107,87 @@ process_all() {
     printf "Creating processed .mb59 files..." | tee -a $LOG
     mbprocess -I $DIR_DATA_MB59/$DATALIST_MB59
     printf "...Done creating the processed mb59 files.\n" | tee -a $LOG
-    
+   
     # Create the processed mb59 datalist
     printf "Creating the processed .mb59 datalist..." | tee -a $LOG
-    printf "\$PROCESSED\n%s\n" > $DIR_DATA_MB59/$DATALISTP_MB59
-    printf "done.\n" | tee -a $LOG
-    
-    # Clean up the temporary listings
-    rm mb59_filenames gsf_filenames gsf_missing mb59_gsf_common
+    printf "\$PROCESSED\n%s\n" $DATALIST_MB59 > $DIR_DATA_MB59/$DATALISTP_MB59
+    printf "done.\n" | tee -a $LOG   
 }
 
+
+#
+# UPDATE_ALL() - Convert new .all files not yet converted to mb59 files
+#
+update_all() {
+    printf "\n\n\n" | tee -a $LOG
+    printf "###########################################################################################" | tee -a $LOG
+    printf "\n\n" | tee -a $LOG
+    printf "%s UTC: Converting new .all files in directory %s.\n\n" $(date --utc +%Y%m%d-%H%M%S) $DIR_DATA_ALL | tee -a $LOG
+
+    # Create the .all datalist
+    printf "Creating the .all datalist..." | tee -a $LOG
+    ls -1 $DIR_DATA_ALL | grep '.all$' | awk '{print $1 " 058 1.000000"}' > $DIR_DATA_ALL/$DATALIST_ALL
+    printf "done.\n" | tee -a $LOG
+
+    # Make sure the .mb59 destination directory exists. If not, abort. If yes, create the .mb59 datalist
+    if [ ! -d $DIR_DATA_MB59 ]; then
+	printf "No directory %s found!\nABORTING.\nConsider running the --convert option instead!\n" $DIR_DATA_MB59 | tee -a $LOG
+    else
+	# Compare the listing of .all files and .mb59 files
+	printf "Comparing the .all and .mb59 file listing..." | tee -a $LOG
+	cat $DIR_DATA_ALL/$DATALIST_ALL | awk -F '.' '{print $1}' > all_filenames
+	cat $DIR_DATA_MB59/$DATALIST_MB59 | awk -F '.' '{print $1}' > mb59_filenames
+	printf "done.\n" | tee -a $LOG
+
+	# Identify the missing .mb59 files
+	comm -23 --nocheck-order all_filenames mb59_filenames > mb59_missing
+	printf "The following .all files have not been converted:\n" | tee -a $LOG
+	cat mb59_missing | awk '{print $1 ".all"}' | tee -a $LOG
+	printf "They will now be processed.\n" | tee -a $LOG
+	
+	# Create a temporary .all update datalist
+	printf "Creating the temporary update .all datalist...\n" | tee -a $LOG
+	cat mb59_missing | awk '{print $1 ".all 58 1.000000"}' > $DIR_DATA_ALL/$DATALIST_UPDATE_ALL
+	printf "done.\n" | tee -a $LOG
+
+	# Preprocess the .all files and create unprocessed .mb59 files
+	printf "Running mbkongsbergpreprocess..." | tee -a $LOG
+	mbkongsbergpreprocess -C -F-1 -I $DIR_DATA_ALL/$DATALIST_UPDATE_ALL -D $DIR_DATA_MB59 | tee -a $LOG
+	printf "done.\n" | tee -a $LOG
+
+	# Create a temporary datalist for unprocessed .mb59
+	printf "Creating the temporary update .mb59 datalist..." | tee -a $LOG
+	cat mb59_missing | awk '{print $1 ".mb59 59 1.000000"}' > $DIR_DATA_MB59/$DATALIST_UPDATE_MB59
+	printf "done.\n" | tee -a $LOG
+
+	# Clean up
+	rm all_filenames mb59_filenames mb59_missing
+
+	# Merge edits from CARIS HIPS & SIPS
+	merge_edits $DATALIST_UPDATE_MB59
+
+	# Update the unprocessed .mb59 datalist
+	ls -1 $DIR_DATA_MB59/$DATALIST_MB59 $DIR_DATA_MB59/$DATALIST_UPDATE_MB59 | xargs cat >> $DIR_DATA_MB59/$DATALIST_MB59
+
+	# Quick clean with mbclean
+	printf "Doing a quick clean with mbclean..." | tee -a $LOG
+	mbclean -I $DIR_DATA_MB59/$DATALIST_UPDATE_MB59 -M4 -C10
+	printf "done.\n" | tee -a $LOG
+
+	# Create the processed mb59 files
+	printf "Creating processed .mb59 files..." | tee -a $LOG
+	mbprocess -I $DIR_DATA_MB59/$DATALIST_UPDATE_MB59
+	printf "...Done creating the processed mb59 files.\n" | tee -a $LOG
+	
+	# Remove the update .all and .mb59 datalists
+	rm $DIR_DATA_ALL/$DATALIST_UPDATE_ALL
+	rm $DIR_DATA_MB59/$DATALIST_UPDATE_MB59
+    fi
+
+    
+}
+
+    
 #
 # GRID(MB-system datalist) - Grid the mb59 files listed in the datalist
 #
@@ -116,7 +201,6 @@ grid() {
     rm $DIR_SURFACES/$GRID.asc     # Comment out for debugging
     printf "done.\n" | tee -a $LOG
 }
-
 
 #
 # DEM() - Create a geotiff DEM using the color palette with the grid
@@ -298,7 +382,7 @@ EOF
 fi
 
 # Parse the command line
-OPTS=`getopt -o h -l all -l grid: -l dem: -l track: -l tide-for-HIPS -l tide-for-MB -l help -- "$@"`
+OPTS=`getopt -o h -l convert -l update -l grid: -l dem: -l track: -l tide-for-HIPS -l tide-for-MB -l help -- "$@"`
 if [ $? != 0 ]
 then
     exit 1
@@ -308,11 +392,15 @@ eval set -- "$OPTS"
 
 while true ; do
     case "$1" in
-        -h) printf "Usage: $0 [--all] [--grid DATALIST] [--dem COLORTABLE] [--track NMEA_LOGGER FILE] [--tide-for-HIPS] [--tide-for-MB] [--help]\n";
+        -h) printf "Usage: $0 [--convert] [--update] [--grid DATALIST] [--dem COLORTABLE] [--track NMEA_LOGGER FILE] [--tide-for-HIPS] [--tide-for-MB] [--help]\n";
 	    shift;;
 
-        --all)
-	    process_all;
+        --convert)
+	    convert_all;
+	    shift;;
+
+	--update)
+	    update_all;
 	    shift;;
 	
 	--grid)
@@ -336,9 +424,10 @@ while true ; do
 	    shift;;
 
 	--help) 
-	    printf "Usage: $0 [--all] [--grid DATALIST] [--dem COLORTABLE] [--track NMEA_LOGGER FILE] [--tide-for-HIPS] [tide-for-MB] [--help]\n\n"
+	    printf "Usage: $0 [--convert] [--update] [--grid DATALIST] [--dem COLORTABLE] [--track NMEA_LOGGER FILE] [--tide-for-HIPS] [tide-for-MB] [--help]\n\n"
 	    printf "** DESCRIPTION:\n"
-	    printf "Use the --all option to process all .all files.\n"
+	    printf "Use the --convert option to convert all .all files.\n"
+	    printf "Use the --update option to convert new .all files not yet converted.\n"
 	    printf "Use the --grid option to grid the data from the specified MB-system datalist.\n"
 	    printf "Use the --dem option to create a final dem with the specified color table. Note that the color table must have been generated by QGIS!\n"
 	    printf "Use the --track option to create a shiptrack from the specified NMEA_logger file.\n"
