@@ -189,16 +189,13 @@ update_all() {
 
     
 #
-# GRID(MB-system datalist) - Grid the mb59 files listed in the datalist
+# GRID(MB-system datalist) - Grid the mb59 files listed in the datalist and produce 2 outputs:
+#                               1) a postscript file for each basemap tile
+#                               2) an ESRI EHdr in Lambert conformal conic projection
 #
 grid() {
     printf "%s UTC: Gridding at %s m resolution the %s MB-System datalist.\n\n" $(date --utc +%Y%m%d-%H%M%S) $CELLSIZE $1 | tee -a $LOG
-    # Make a NetCDF grid
-    printf "Making an ESRI grid...\n" | tee -a $LOG
-    mbgrid -A1 -I $1 -J$PROJECTION -C3 -F5 -G4 -N -V -O $DIR_SURFACES/$GRID -E$CELLSIZE/0.0/meters!
-    gdal_translate -of EHdr -a_srs $PROJ_WKT $DIR_SURFACES/$GRID.asc $DIR_SURFACES/$GRID-LCC.flt
-    gdal_calc.py -A $DIR_SURFACES/$GRID-LCC.flt --outfile=$DIR_SURFACES/$GRID-LCC_neg.flt --calc="-1*A"
-    rm $DIR_SURFACES/$GRID.asc     # Comment out for debugging
+    python $DIR_ROOT/anbasemap.py $DIR_DATA_MB59/$DATALIST_MB59 2
     printf "done.\n" | tee -a $LOG
 }
 
