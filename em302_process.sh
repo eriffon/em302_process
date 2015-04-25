@@ -3,8 +3,8 @@
 #
 # EM302 Processing Scripts for CCGS Amundsen Data
 # AUTHOR: Jean-Guy Nistad
-# VERSION: 13
-# DATE: 2015-04-24
+# VERSION: 15
+# DATE: 2015-04-25
 #
 # For next commit:
 #
@@ -195,7 +195,7 @@ update_all() {
 #
 grid() {
     printf "%s UTC: Gridding at %s m resolution the %s MB-System datalist.\n\n" $(date --utc +%Y%m%d-%H%M%S) $CELLSIZE $1 | tee -a $LOG
-    python $DIR_ROOT/anbasemap.py $DIR_DATA_MB59/$DATALIST_MB59 2
+    python $DIR_ROOT/anbasemap.py -D $DIR_SURFACES $DIR_DATA_MB59/$DATALIST_MB59 2
     printf "done.\n" | tee -a $LOG
 }
 

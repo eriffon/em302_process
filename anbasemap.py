@@ -5,8 +5,8 @@
 # TITLE: anbasemap.py
 # AUTHOR: Jean-Guy Nistad
 # DESCRIPTION: Create the ArcticNet 15' x 30' basemap tiles based on a given MB-System datalist
-# DATE: March 5th, 2015
-# VERSION: 0
+# DATE: April 25th, 2015
+# VERSION: 1
 # 
 # Copyright (C) 2015  Jean-Guy Nistad
 #
@@ -106,12 +106,12 @@ def round_bounds(x, base=0.5, direction='up'):
     
 
 
-def proj_limits(region, tilename):
+def proj_limits(region, path_tilename):
     """Generate a file containing the projection coordinate limits of the tile
 
     Keyword arguments:
     region -- GMT region in the W/E/S/N format
-    tilename -- Name of the tile
+    path_tilename -- Path and Name of the tile
 
     Returns:
     filename -- a variable to the file containing the projection coordinate limites of the tile
@@ -119,7 +119,7 @@ def proj_limits(region, tilename):
     import pyproj
 
     # Open a file to store results
-    filename = tilename+'_lcc_coord.txt'
+    filename = path_tilename+'_lcc_coord.txt'
     out = open(filename, 'w')
     
     # Source and destination coordinate systems
@@ -152,40 +152,51 @@ def proj_limits(region, tilename):
     
     
     
-def make_EHdr_grid(datalist, region, tilename):
+def make_EHdr_grid(datalist, region, output_dir, tilename):
     """Make an ESRI EHdr Lambert conformal conic projected grid
 
     Keyword arguments:
     datalist -- MB-System datalist
     region -- GMT region in the W/E/S/N format
+    output_dir -- directory path in which to store the map
     tilename -- Name of the tile
     """
     # Grid
-    subprocess.call(["mbgrid", "-I", datalist, "-A2", "-F5", "-N", "-R"+region, "-R1.3", "-JAmundsenLambert", "-E10/0.0/meters!", "-O", tilename+"_Ztopo_lcc", "-V"])
+    subprocess.call(["mbgrid", "-I", datalist, "-A2", "-F5", "-N", "-R"+region, "-R1.3", "-JAmundsenLambert", "-E10/0.0/meters!", "-O", output_dir+"/"+tilename+"_Ztopo_lcc", "-V"])
 
     # Get the projected limits
-    proj_limit_file = proj_limits(region, tilename)
+    proj_limit_file = proj_limits(region, output_dir+"/"+tilename)
     
     # Mask based on projected coordinates
-    subprocess.call(["grdmask", proj_limit_file, "-G"+tilename+"_Ztopo_lcc_mask.grd", "-R"+tilename+"_Ztopo_lcc.grd", "-NNaN/1/1", "-V"])
+    subprocess.call(["grdmask", proj_limit_file, "-G"+output_dir+"/"+tilename+"_Ztopo_lcc_mask.grd", "-R"+output_dir+"/"+tilename+"_Ztopo_lcc.grd", "-NNaN/1/1", "-V"])
 
     # Perform mask
-    subprocess.call(["grdmath", tilename+"_Ztopo_lcc.grd", tilename+"_Ztopo_lcc_mask.grd", "OR", "=", tilename+"_Ztopo_lcc_tiled.grd"])
+    subprocess.call(["grdmath", output_dir+"/"+tilename+"_Ztopo_lcc.grd", output_dir+"/"+tilename+"_Ztopo_lcc_mask.grd", "OR", "=", output_dir+"/"+tilename+"_Ztopo_lcc_tiled.grd"])
 
     # Change the output format
-    subprocess.call(["gdal_translate", "-a_srs", "+proj=lcc +lat_1=70 +lat_2=73 +lat_0=70 +lon_0=-105 +x_0=2000000 +y_0=2000000 +datum=WGS84 +units=m +no_defs", "-of", "EHdr", "-a_nodata", "0", tilename+"_Ztopo_lcc_tiled.grd", tilename+"_Ztopo_lcc_tiled.flt"])
+    subprocess.call(["gdal_translate", "-a_srs", "+proj=lcc +lat_1=70 +lat_2=73 +lat_0=70 +lon_0=-105 +x_0=2000000 +y_0=2000000 +datum=WGS84 +units=m +no_defs", "-of", "EHdr", "-a_nodata", "0", output_dir+"/"+tilename+"_Ztopo_lcc_tiled.grd", output_dir+"/"+tilename+"_Ztopo_lcc_tiled.flt"])
     
 
-def make_gif_map(datalist, region, tilename):
+def make_gif_map(datalist, region, output_dir, tilename, logo):
     """Make a GIF file of the ArcticNet tile
 
     Keyword arguments:
     datalist -- MB-System datalist
     region -- GMT region in the W/E/S/N format
+    output_dir -- directory path in which to store the map
     tilename -- Name of the tile
+    logo -- Name of the logo to place in postscript map
     """
+
+    # Check if the logo file exists
+    if not os.path.isfile(output_dir+"/"+logo):
+        print 'Could not find file %s. Please correct and try running the program again' % logo
+        exit()
+    else:
+        print '%s found in directory.' % logo
+    
     # Grid
-    subprocess.call(["mbgrid", "-I", datalist, "-A2", "-F5", "-N", "-R"+region, "-R1.3", "-E10/0.0/meters!", "-O", tilename+"_Ztopo", "-V"])
+    subprocess.call(["mbgrid", "-I", datalist, "-A2", "-F5", "-N", "-R"+region, "-R1.3", "-E10/0.0/meters!", "-O", output_dir+"/"+tilename+"_Ztopo", "-V"])
 
     # Specify the position (lon, lat) of the directional rose (north arrow)
     roseLon = float(region.split('/')[1]) - 5/60.
@@ -193,22 +204,27 @@ def make_gif_map(datalist, region, tilename):
     rosePos = "%.5f/%.5f" % (roseLon, roseLat)
 
     #  Write the GMT script and execute it
-    write_gmt_script(tilename, tilename+'_Ztopo.grd', region, rosePos)
-    subprocess.call(["chmod", "u+x", tilename+".sh"])
-    subprocess.call(["./"+tilename+".sh"])
+    write_gmt_script(output_dir, tilename, tilename+'_Ztopo.grd', region, rosePos)
+    subprocess.call(["chmod", "u+x", output_dir+"/"+tilename+".sh"])
+    print "\n\n--------------\n\n"
+    print "Instructions:"
+    print "Execute <%s> to create the map in postscript and gif format." % (output_dir+"/"+tilename+".sh")
+    print "\n\n--------------\n\n"
+    #subprocess.call(["./"+tilename+".sh"])
 
     
     
-def write_gmt_script(filename, Ztopo, region, rosePos):
+def write_gmt_script(output_dir, filename, Ztopo, region, rosePos):
     """Write a GMT bash script for a basemap tile
 
     Keyword arguments:
+    output_dir -- output directory to store the product
     filename -- name of file to write
     Ztopo -- name of the geographic bathymetric grid in NetCDF format
     region -- geographic extent
     rosePos -- position of the directional rose on the map
     """
-    out = open(filename+'.sh', 'w')
+    out = open(output_dir+"/"+filename+'.sh', 'w')
     out.write('''#!/bin/bash
 
 PATH=$PATH:/usr/lib/gmt/bin
@@ -306,20 +322,14 @@ def main():
     
     parser = argparse.ArgumentParser(description="Create the ArcticNet 15' x 30' basemap tiles based on a given MB-System datalist")
     parser.add_argument('datalist', type=str, help='MB-System datalist to process')
+    parser.add_argument('-D', '--outputDir', help='output directory in which to store the products')
     parser.add_argument('-l', '--logo', default='logos.sun', help='logo to display in legend. Default: logos.sun')
     parser.add_argument('action', type=int, choices=[0,1,2], help='action to be performed. 0=make EHdr grid; 1=make GIF map; 2=make both')
     args = parser.parse_args()
  
     lon_step = 0.5
     lat_step = 0.25
-
-    # Check if the logo file exists
-    if not os.path.isfile(args.logo):
-        print 'Could not find file %s. Please correct and try running the program again' % args.logo
-        exit()
-    else:
-        print '%s found in directory.' % args.logo
-    
+  
     # Check that mb-system is installed
     try:
         subprocess.check_call(['which', 'mbinfo'])
@@ -368,9 +378,9 @@ def main():
             # Execute main action if there is data to work on
             if (numRec > 0):
                 if ((args.action == K_EHDR_GRD) or (args.action == K_EHDR_AND_GIF)):
-                    make_EHdr_grid(args.datalist, region, tilename)
-                elif ((args.action == K_GIF_MAP) or (args.action == K_EHDR_AND_GIF)):
-                    make_gif_map(args.datalist, region, tilename)
+                    make_EHdr_grid(args.datalist, region, args.outputDir, tilename)
+                if ((args.action == K_GIF_MAP) or (args.action == K_EHDR_AND_GIF)):
+                    make_gif_map(args.datalist, region, args.outputDir, tilename, args.logo)
             else:
                 print "No data to grid for tilename %s!" % (tilename)
 
