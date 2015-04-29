@@ -3,14 +3,15 @@
 #
 # EM302 Processing Scripts for CCGS Amundsen Data
 # AUTHOR: Jean-Guy Nistad
-# VERSION: 15
-# DATE: 2015-04-25
+# VERSION: 16
+# DATE: 2015-04-29
 #
 # For next commit:
 #
 # Future improvements:
-#    - As the merge_gsh.sh runs, print the command that is being run at the standard out and in the log file.
-#    - Make the merg_gsf.sh script optional if one does not process using CARIS HIPS & SIPS
+#    - Make the merge_edits.sh script optional if one does not process using CARIS HIPS & SIPS
+#    - Add a warning message when script is run with no (or an invalid) argument
+#    - Modify the way the code tries to find whether or not there is data in a tile to make the search faster!
 #################################################################
 
 
@@ -40,23 +41,24 @@ merge_edits() {
 	cat gsf_missing | awk '{print $1 ".gsf"}' | tee -a $LOG
     fi
 
-    # Create the merge gsf script
-    printf "Creating the mbcopy script file..." | tee -a $LOG
-    touch $MERGE_GSF_SCRIPT | printf "#!/bin/bash\n\n" > $MERGE_GSF_SCRIPT
+    # Create the make esf script
+    printf "Creating the script to make .esf files..." | tee -a $LOG
+    touch $MAKE_ESF_SCRIPT | printf "#!/bin/bash\n\n" > $MAKE_ESF_SCRIPT
     cat mb59_gsf_common | awk -v dir_mb59=$DIR_DATA_MB59 -v dir_gsf=$DIR_DATA_GSF \
-                              '{print "mbcopy -F59/59/121 -I " dir_mb59 "/" $1 ".mb59 -M " dir_gsf "/" $1 ".gsf -O " dir_mb59 "/" $1 "f.mb59\n" \
-                                      "rm " dir_mb59 "/" $1 ".mb59\n" \
-                                      "mv " dir_mb59 "/" $1 "f.mb59 " dir_mb59 "/" $1 ".mb59"}' >> $MERGE_GSF_SCRIPT
+                              '{print "mbgetesf -F121 -I " dir_gsf "/" $1 ".gsf -O " dir_mb59 "/" $1 ".mb59.esf"}' >> $MAKE_ESF_SCRIPT
     printf "done.\n" | tee -a $LOG
 
-    # run the merge gsf script
-    printf "Running the mbcopy script file..." | tee -a $LOG
-    chmod +x $MERGE_GSF_SCRIPT
-    source $MERGE_GSF_SCRIPT
+    # run the make esf script
+    printf "Running the script to make esf files..." | tee -a $LOG
+    chmod +x $MAKE_ESF_SCRIPT
+    source $MAKE_ESF_SCRIPT
     printf "done.\n" | tee -a $LOG
 
     # Clean up the temporary listings
     rm mb59_filenames gsf_filenames gsf_missing mb59_gsf_common
+
+    # Remove the make esf script
+    rm $MAKE_ESF_SCRIPT
 }
 
 
@@ -71,7 +73,7 @@ convert_all() {
 
     # Create the .all datalist
     printf "Creating the .all datalist..." | tee -a $LOG
-    ls -1 $DIR_DATA_ALL | grep '.all$' | awk '{print $1 " 058 1.000000"}' > $DIR_DATA_ALL/$DATALIST_ALL
+    ls -1 $DIR_DATA_ALL | grep '.all$' | grep -v '9999' | awk '{print $1 " 058 1.000000"}' > $DIR_DATA_ALL/$DATALIST_ALL
     printf "done.\n" | tee -a $LOG
 
     # Make sure the .mb59 destination directory exists. If not, create it. If yes, erase its content
@@ -97,21 +99,6 @@ convert_all() {
 
     # Merge edits from CARIS HIPS & SIPS
     merge_edits $DATALIST_MB59
-    
-    # Quick clean with mbclean
-    printf "Doing a quick clean with mbclean..." | tee -a $LOG
-    mbclean -I $DIR_DATA_MB59/$DATALIST_MB59 -M4 -C10
-    printf "done.\n" | tee -a $LOG
-
-    # Create the processed mb59 files
-    printf "Creating processed .mb59 files..." | tee -a $LOG
-    mbprocess -I $DIR_DATA_MB59/$DATALIST_MB59
-    printf "...Done creating the processed mb59 files.\n" | tee -a $LOG
-   
-    # Create the processed mb59 datalist
-    printf "Creating the processed .mb59 datalist..." | tee -a $LOG
-    printf "\$PROCESSED\n%s\n" $DATALIST_MB59 > $DIR_DATA_MB59/$DATALISTP_MB59
-    printf "done.\n" | tee -a $LOG   
 }
 
 
@@ -126,7 +113,7 @@ update_all() {
 
     # Create the .all datalist
     printf "Creating the .all datalist..." | tee -a $LOG
-    ls -1 $DIR_DATA_ALL | grep '.all$' | awk '{print $1 " 058 1.000000"}' > $DIR_DATA_ALL/$DATALIST_ALL
+    ls -1 $DIR_DATA_ALL | grep '.all$' | grep -v '9999' | awk '{print $1 " 058 1.000000"}' > $DIR_DATA_ALL/$DATALIST_ALL
     printf "done.\n" | tee -a $LOG
 
     # Make sure the .mb59 destination directory exists. If not, abort. If yes, create the .mb59 datalist
@@ -169,16 +156,6 @@ update_all() {
 	# Update the unprocessed .mb59 datalist
 	ls -1 $DIR_DATA_MB59/$DATALIST_MB59 $DIR_DATA_MB59/$DATALIST_UPDATE_MB59 | xargs cat >> $DIR_DATA_MB59/$DATALIST_MB59
 
-	# Quick clean with mbclean
-	printf "Doing a quick clean with mbclean..." | tee -a $LOG
-	mbclean -I $DIR_DATA_MB59/$DATALIST_UPDATE_MB59 -M4 -C10
-	printf "done.\n" | tee -a $LOG
-
-	# Create the processed mb59 files
-	printf "Creating processed .mb59 files..." | tee -a $LOG
-	mbprocess -I $DIR_DATA_MB59/$DATALIST_UPDATE_MB59
-	printf "...Done creating the processed mb59 files.\n" | tee -a $LOG
-	
 	# Remove the update .all and .mb59 datalists
 	rm $DIR_DATA_ALL/$DATALIST_UPDATE_ALL
 	rm $DIR_DATA_MB59/$DATALIST_UPDATE_MB59
@@ -187,20 +164,83 @@ update_all() {
     
 }
 
+
+#
+# PROCESS_MB59(DATALIST) - Create processed .mb59 files from the specified MB-system datalist
+#
+process_mb59() {
+    printf "\n\n\n" | tee -a $LOG
+    printf "###########################################################################################" | tee -a $LOG
+    printf "\n\n" | tee -a $LOG
+    printf "%s UTC: Processing the mb59 files in the %s MB-System datalist.\n\n" $(date --utc +%Y%m%d-%H%M%S) $1 | tee -a $LOG
     
-#
-# GRID(MB-system datalist) - Grid the mb59 files listed in the datalist and produce 2 outputs:
-#                               1) a postscript file for each basemap tile
-#                               2) an ESRI EHdr in Lambert conformal conic projection
-#
-grid() {
-    printf "%s UTC: Gridding at %s m resolution the %s MB-System datalist.\n\n" $(date --utc +%Y%m%d-%H%M%S) $CELLSIZE $1 | tee -a $LOG
-    python $DIR_ROOT/anbasemap.py -D $DIR_SURFACES $DIR_DATA_MB59/$DATALIST_MB59 2
+    # Apply the bathymetric edits
+    printf "Applying bathymetric edits...\n" | tee -a $LOG
+    cat $1 | awk -F '.' '{print $1}' > mb59_filenames
+    touch mbset.sh | printf "#!/bin/bash\n\n" > mbset.sh
+    cat mb59_filenames | awk '{print "mbset -PEDITSAVEMODE:1 -PEDITSAVEFILE:" $1 ".mb59.esf -I " $1 ".mb59"}' >> mbset.sh
+    chmod +x mbset.sh
+    source mbset.sh
+    rm mbset.sh
+    printf "...Done applying bathymetric edits.\n" | tee -a $LOG
+    
+    # Apply the tide
+    
+    # Process the mb59 files and create processed .mb59 files
+    printf "Creating processed .mb59 files..." | tee -a $LOG
+    mbprocess -I $DIR_DATA_MB59/$DATALIST_MB59
+    printf "...Done creating the processed mb59 files.\n" | tee -a $LOG
+   
+    # Create the mb59 datalist of processed mb59 files
+    printf "Creating the processed .mb59 datalist..." | tee -a $LOG
+    printf "\$PROCESSED\n%s\n" $DATALIST_MB59 > $DIR_DATA_MB59/$DATALISTP_MB59
     printf "done.\n" | tee -a $LOG
 }
 
+
+
 #
-# DEM() - Create a geotiff DEM using the color palette with the grid
+# GRID-MAP(DATALIST) - Grid the mb59 files listed in the datalist and produce a postscript and a .gif file for each basemap tile
+#
+grid-map() {
+    printf "\n\n\n" | tee -a $LOG
+    printf "###########################################################################################" | tee -a $LOG
+    printf "\n\n" | tee -a $LOG
+    printf "%s UTC: Making postscript and .gif GMT tilemaps at %s m resolution from the %s MB-System datalist.\n\n" $(date --utc +%Y%m%d-%H%M%S) $CELLSIZE $1 | tee -a $LOG
+    
+    # Make sure that a logo file exists in the output directory
+    if [ ! -f $DIR_SURFACES/logos.sun ]; then
+	cp logos.sun $DIR_SURFACES
+    fi
+    
+    python $DIR_ROOT/anbasemap.py -D $DIR_SURFACES $1 $CELLSIZE 1
+    printf "done.\n" | tee -a $LOG
+}
+
+
+
+#
+# GRID-ESRI(DATALIST) - Grid the mb59 files listed in the datalist and produce ESRI EHdr tile files in Lambert conformal conic projection
+#
+grid-esri() {
+    printf "\n\n\n" | tee -a $LOG
+    printf "###########################################################################################" | tee -a $LOG
+    printf "\n\n" | tee -a $LOG
+    printf "%s UTC: Making ESRI EHdr tile files at %s m resolution from the %s MB-System datalist.\n\n" $(date --utc +%Y%m%d-%H%M%S) $CELLSIZE $1 | tee -a $LOG
+    python $DIR_ROOT/anbasemap.py -D $DIR_SURFACES $1 $CELLSIZE 0
+    printf "done.\n" | tee -a $LOG
+
+    # Clean up (comment out for debugging)
+    rm $DIR_SURFACES/*.txt
+    rm $DIR_SURFACES/*.grd
+    rm $DIR_SURFACES/*.cmd
+    rm $DIR_SURFACES/*.flt.aux.xml
+}
+
+
+
+#
+# DEM(COLORTABLE) - Create a geotiff DEM using the color palette with the grid
 #
 dem() {
     # Create a color table from the min max of the grid
@@ -239,8 +279,9 @@ EOF
     rm $DIR_SURFACES/$GRID-relief-LCC.tif $DIR_SURFACES/$GRID-hillshade-LCC.tif mbcolortable
 }
 
+
 #
-# SHIPTRACK(NMEA_logger file) - Create a 5 minute decimated shiptrack from a file containing NMEA-0183 strings
+# SHIPTRACK(NMEA_LOGGER_FILE) - Create a 5 minute decimated shiptrack from a file containing NMEA-0183 strings
 #
 shiptrack() {
     printf "\n\n\n" | tee -a $LOG
@@ -248,28 +289,24 @@ shiptrack() {
     printf "\n\n" | tee -a $LOG
     printf "UTC %s: Creating a shiptrack for the %s file.\n" $(date --utc +%Y%m%d-%H%M%S) $1 | tee -a $LOG
 
+    # Parse the input argument to remove the path is the user added it manually
+    filename=$(echo $1 | awk '{print filename[(split($1,filename,"/"))]}')
+    
     # Check if the specified file exists
-    if [ ! -f $NMEA/$1 ]; then
+    if [ ! -f $NMEA/$filename ]; then
 	printf "Error! The file %s was not found!\n" $1
 	printf "Please check the filename or that the path %s specified in the parameters.dat file is correct.\n" $NMEA
 	exit 1
     fi
 
+    # Call the python decode_nmea file, capture the created file name and move the file to the proper directory
     printf "Calling decode_nmea.py...\n"
-    # I made a python script because if has good support for time series with the pandas library
-    python decode_nmea.py $NMEA/$1
+    shiptrack_filename=$(python decode_nmea.py $NMEA/$filename)
     printf "done.\n" | tee -a $LOG
-
-    # I don't know how to retrieve the output filename of the python script, so I am parsing the input argument assuming I know what the output file looks like
-    filename=$(echo $1 | awk '{print filename[(split($1,filename,"/"))]}')
-    date=$(echo $1 | awk '{gsub("_NMEA.txt",""); print $1}')
-    year=$(echo $date | awk '{print(substr($1,5))}')
-    month=$(echo $date | awk '{print(substr($1,3,2))}')
-    day=$(echo $date | awk '{print(substr($1,1,2))}')
-    output_file="shiptrack"-$year$month$day".txt"
-    mv $output_file $DIR_SHIPTRACK
-    printf "The shiptrack file %s was created in the %s directory\n" $output_file $DIR_SHIPTRACK | tee -a $LOG
+    mv $shiptrack_filename $DIR_SHIPTRACK
+    printf "The shiptrack file %s was created in the %s directory\n" $shiptrack_filename $DIR_SHIPTRACK | tee -a $LOG
 }
+
 
 #
 # WEBTIDE2CARIS() - Convert the Webtide prediction file to a CARIS HIPS & SIPS tide file
@@ -379,7 +416,7 @@ EOF
 fi
 
 # Parse the command line
-OPTS=`getopt -o h -l convert -l update -l grid: -l dem: -l track: -l tide-for-HIPS -l tide-for-MB -l help -- "$@"`
+OPTS=`getopt -o h -l convert -l update -l process: -l grid-map: -l grid-esri: -l dem: -l track: -l tide-for-HIPS -l tide-for-MB -l help -- "$@"`
 if [ $? != 0 ]
 then
     exit 1
@@ -389,7 +426,7 @@ eval set -- "$OPTS"
 
 while true ; do
     case "$1" in
-        -h) printf "Usage: $0 [--convert] [--update] [--grid DATALIST] [--dem COLORTABLE] [--track NMEA_LOGGER FILE] [--tide-for-HIPS] [--tide-for-MB] [--help]\n";
+        -h) printf "Usage: $0 [--convert] [--update] [--process DATALIST] [--grid-map DATALIST] [grid-esri DATALIST] [--dem COLORTABLE] [--track NMEA_LOGGER FILE] [--tide-for-HIPS] [--tide-for-MB] [--help]\n";
 	    shift;;
 
         --convert)
@@ -399,9 +436,17 @@ while true ; do
 	--update)
 	    update_all;
 	    shift;;
-	
-	--grid)
-	    grid $2;
+
+	--process)
+	    process_mb59 $2;
+	    shift 2;;
+
+	--grid-map)
+	    grid-map $2;
+	    shift 2;;
+
+	--grid-esri)
+	    grid-esri $2;
 	    shift 2;;
 
 	--dem)
@@ -421,11 +466,13 @@ while true ; do
 	    shift;;
 
 	--help) 
-	    printf "Usage: $0 [--convert] [--update] [--grid DATALIST] [--dem COLORTABLE] [--track NMEA_LOGGER FILE] [--tide-for-HIPS] [tide-for-MB] [--help]\n\n"
+	    printf "Usage: $0 [--convert] [--update] [--process DATALIST] [--grid-map DATALIST] [grid-esri DATALIST] [--dem COLORTABLE] [--track NMEA_LOGGER_FILE] [--tide-for-HIPS] [tide-for-MB] [--help]\n\n"
 	    printf "** DESCRIPTION:\n"
 	    printf "Use the --convert option to convert all .all files.\n"
 	    printf "Use the --update option to convert new .all files not yet converted.\n"
-	    printf "Use the --grid option to grid the data from the specified MB-system datalist.\n"
+	    printf "Use the --proccess option to create processed .mb59 files from the specified MB-system datalist.\n"
+	    printf "Use the --grid-map option to produce postscript and .gif GMT grid tilemap(s) from the specified MB-system datalist.\n"
+	    printf "Use the --grid-esri option to produce ESRI EHdr grid(s) from the specified MB-system datalist.\n"
 	    printf "Use the --dem option to create a final dem with the specified color table. Note that the color table must have been generated by QGIS!\n"
 	    printf "Use the --track option to create a shiptrack from the specified NMEA_logger file.\n"
 	    printf "Use the --tide-for-HIPS option to create a CARIS HIPS & SIPS tide file with the Webtide file Track Elevation Prediction (Time in GMT).html located in %s.\n" $DIR_WEBTIDE
@@ -435,3 +482,5 @@ while true ; do
         --) shift; break;;
     esac
 done
+
+echo $ARG_GRID

@@ -15,10 +15,10 @@
 DIR_ROOT=$(pwd)
 
 # Path to the .all files to read
-DIR_DATA_ALL=$DIR_ROOT/all/PT-roll
+DIR_DATA_ALL=$DIR_ROOT/all/2015_01_leg1_experiment
 
 # Path to where the .mb59 files should be written
-DIR_DATA_MB59=$DIR_ROOT/mb59/PT-roll
+DIR_DATA_MB59=$DIR_ROOT/mb59/2015_01_leg1_experiment
 
 # Path to the .gsf files should be read
 DIR_DATA_GSF=$DIR_ROOT/gsf
@@ -39,7 +39,7 @@ DIR_MB_TIDE=$DIR_ROOT/tide
 DIR_SURFACES=$DIR_ROOT/surfaces
 
 # Path the the NMEA_logger files
-NMEA=/home/jgnistad/Projets/Personnels/13-17-ArcticNet/Technical/Acquisition/NMEA_logger
+NMEA=$DIR_ROOT/NMEA_logger
 
 ###################### FILENAME LISTING ###############################
 
@@ -64,8 +64,8 @@ DATALISTP_MB59=datalistp_mb59.mb-1
 # Name of the .gsf MB-System datalist
 DATALIST_GSF=datalist_gsf.mb-1                     
 
-# Name of bash script for merging of the .gsf edited files (in CARIS HIPS) with .all files
-MERGE_GSF_SCRIPT=merge_gsf.sh                      
+# Name of bash script for creation of the .esf files from the .gsf files produced in CARIS HIPS
+MAKE_ESF_SCRIPT=make_esf.sh
 
 # Prefix name for the shiptrack files
 SHIPTRACK_PREFIX=shiptrack 

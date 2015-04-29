@@ -152,7 +152,7 @@ def proj_limits(region, path_tilename):
     
     
     
-def make_EHdr_grid(datalist, region, output_dir, tilename):
+def make_EHdr_grid(datalist, region, output_dir, tilename, cellsize):
     """Make an ESRI EHdr Lambert conformal conic projected grid
 
     Keyword arguments:
@@ -162,7 +162,8 @@ def make_EHdr_grid(datalist, region, output_dir, tilename):
     tilename -- Name of the tile
     """
     # Grid
-    subprocess.call(["mbgrid", "-I", datalist, "-A2", "-F5", "-N", "-R"+region, "-R1.3", "-JAmundsenLambert", "-E10/0.0/meters!", "-O", output_dir+"/"+tilename+"_Ztopo_lcc", "-V"])
+    print "Gridding with %s m cell size..." % (cellsize)
+    subprocess.call(["mbgrid", "-I", datalist, "-A2", "-F5", "-N", "-R"+region, "-JAmundsenLambert", "-E"+str(cellsize)+"/0.0/meters!", "-O", output_dir+"/"+tilename+"_Ztopo_lcc", "-V"])
 
     # Get the projected limits
     proj_limit_file = proj_limits(region, output_dir+"/"+tilename)
@@ -177,7 +178,8 @@ def make_EHdr_grid(datalist, region, output_dir, tilename):
     subprocess.call(["gdal_translate", "-a_srs", "+proj=lcc +lat_1=70 +lat_2=73 +lat_0=70 +lon_0=-105 +x_0=2000000 +y_0=2000000 +datum=WGS84 +units=m +no_defs", "-of", "EHdr", "-a_nodata", "0", output_dir+"/"+tilename+"_Ztopo_lcc_tiled.grd", output_dir+"/"+tilename+"_Ztopo_lcc_tiled.flt"])
     
 
-def make_gif_map(datalist, region, output_dir, tilename, logo):
+    
+def make_gif_map(datalist, region, output_dir, tilename, logo, cellsize):
     """Make a GIF file of the ArcticNet tile
 
     Keyword arguments:
@@ -196,7 +198,8 @@ def make_gif_map(datalist, region, output_dir, tilename, logo):
         print '%s found in directory.' % logo
     
     # Grid
-    subprocess.call(["mbgrid", "-I", datalist, "-A2", "-F5", "-N", "-R"+region, "-R1.3", "-E10/0.0/meters!", "-O", output_dir+"/"+tilename+"_Ztopo", "-V"])
+    print "Gridding with %s m cell size..." % (cellsize)
+    subprocess.call(["mbgrid", "-I", datalist, "-A2", "-F5", "-N", "-R"+region, "-E"+str(cellsize)+"/0.0/meters!", "-O", output_dir+"/"+tilename+"_Ztopo", "-V"])
 
     # Specify the position (lon, lat) of the directional rose (north arrow)
     roseLon = float(region.split('/')[1]) - 5/60.
@@ -324,6 +327,7 @@ def main():
     parser.add_argument('datalist', type=str, help='MB-System datalist to process')
     parser.add_argument('-D', '--outputDir', help='output directory in which to store the products')
     parser.add_argument('-l', '--logo', default='logos.sun', help='logo to display in legend. Default: logos.sun')
+    parser.add_argument('cellsize', type=float, help='cell size')
     parser.add_argument('action', type=int, choices=[0,1,2], help='action to be performed. 0=make EHdr grid; 1=make GIF map; 2=make both')
     args = parser.parse_args()
  
@@ -378,9 +382,9 @@ def main():
             # Execute main action if there is data to work on
             if (numRec > 0):
                 if ((args.action == K_EHDR_GRD) or (args.action == K_EHDR_AND_GIF)):
-                    make_EHdr_grid(args.datalist, region, args.outputDir, tilename)
+                    make_EHdr_grid(args.datalist, region, args.outputDir, tilename, args.cellsize)
                 if ((args.action == K_GIF_MAP) or (args.action == K_EHDR_AND_GIF)):
-                    make_gif_map(args.datalist, region, args.outputDir, tilename, args.logo)
+                    make_gif_map(args.datalist, region, args.outputDir, tilename, args.logo, args.cellsize)
             else:
                 print "No data to grid for tilename %s!" % (tilename)
 
