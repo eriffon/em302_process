@@ -26,6 +26,10 @@
 
 """
 
+For next commit:
+   - removed the directional rose
+   - removed attempt to use NetCDF files
+
 """
 
 import math as m
@@ -35,59 +39,6 @@ import os.path
 import subprocess
 import numpy as np
 import geospatial as geo
-
-
-# def write_tile_metadata():
-#     """
-#     """
-#     from netCDF4 import Dataset
-    
-#     westBound = -119
-#     eastBound = -55
-#     southBound = 46
-#     northBound = 82
-#     numWE_tiles = 128
-#     numSN_tiles = 144
-
-#     # Vectors of longitude and latitude tiles
-#     lats = np.linspace(northBound, southBound, num=numSN_tiles, endpoint=False)
-#     lons = np.linspace(westBound, eastBound, num=numWE_tiles, endpoint=False)
-
-#     # Fill-in the tilenames
-#     tilenamesArray = np.empty(shape=(numSN_tiles,numWE_tiles), dtype='a21')
-#     for y in lats:
-#         yd, ym, ys, yh = geo.decdeg2dms_hem(y, 'lat')
-#         for x in lons:
-#             xd, xm, xs, xh = geo.decdeg2dms_hem(x, 'lon')
-#             tilenamesArray[y][x] = "%.2d_%.2d_%.2d_%c_%.2d_%.2d_%.2d_%c" % (yd, ym, ys, yh, xd, xm, xs, xh)
-#             print "Creating basemap tile %s..." % tilenamesArray[y][x]
-    
-#     # Matrix of longitude and latitude tiles
-#     # lonArray = np.repeat(lons[np.newaxis, :], numSN_tiles, 0)
-#     # latArray = np.repeat(lats[:, np.newaxis], numWE_tiles, 1)
-
-#     # Create the netCDF dataset
-#     dataset = Dataset('tileMetaDataset.nc', 'w', format='NETCDF4_CLASSIC')
-
-#     # Add dimensions
-#     lat = dataset.createDimension('lat', numSN_tiles)
-#     lon = dataset.createDimension('lon', numWE_tiles)
-
-#     # Add variables
-#     latitudes  = dataset.createVariable('latitude', np.float32, ('lat',))
-#     longitudes = dataset.createVariable('longitude', np.float32, ('lon',))
-#     tilenames = dataset.createVariable('tilename', np.dtype='a21', ('lat','lon',))
-    
-#     # Write data
-#     latitudes[:]  = lats
-#     longitudes[:] = lons
-#     tilenames[:] = tilenamesArray
-
-
-
-#     # Close the netCDF dataset
-#     dataset.close()
-
 
 
     
@@ -199,15 +150,21 @@ def make_gif_map(datalist, region, output_dir, tilename, logo, cellsize):
     
     # Grid
     print "Gridding with %s m cell size..." % (cellsize)
-    subprocess.call(["mbgrid", "-I", datalist, "-A2", "-F5", "-N", "-R"+region, "-E"+str(cellsize)+"/0.0/meters!", "-O", output_dir+"/"+tilename+"_Ztopo", "-V"])
+    gridname = output_dir+"/"+tilename+"_Ztopo"
+    print gridname
+    subprocess.call(["mbgrid", "-I", datalist, "-A2", "-F5", "-N", "-R"+region, "-E"+str(cellsize)+"/0.0/meters!", "-O", gridname, "-V"])
 
-    # Specify the position (lon, lat) of the directional rose (north arrow)
-    roseLon = float(region.split('/')[1]) - 5/60.
-    roseLat = float(region.split('/')[3]) - 2/60.
-    rosePos = "%.5f/%.5f" % (roseLon, roseLat)
+    # Get the zmin and zmax of the grid
+    zrange = subprocess.check_output("grdinfo %s | grep 'z_min'"  % (gridname+".grd"), shell=True)
+    zmin = int(round_bounds(float(zrange.split(' ')[2]), base=1, direction='down'))
+    zmax = int(round_bounds(float(zrange.split(' ')[4]), base=1, direction='up'))
 
+    # Compute the color palette interval
+    numBars=5
+    interval = abs((zmax - zmin) / numBars)
+    
     #  Write the GMT script and execute it
-    write_gmt_script(output_dir, tilename, tilename+'_Ztopo.grd', region, rosePos)
+    write_gmt_script(output_dir, tilename, tilename+'_Ztopo.grd', region, zmin, zmax, interval)
     subprocess.call(["chmod", "u+x", output_dir+"/"+tilename+".sh"])
     print "\n\n--------------\n\n"
     print "Instructions:"
@@ -217,7 +174,7 @@ def make_gif_map(datalist, region, output_dir, tilename, logo, cellsize):
 
     
     
-def write_gmt_script(output_dir, filename, Ztopo, region, rosePos):
+def write_gmt_script(output_dir, filename, Ztopo, region, zmin, zmax, interval):
     """Write a GMT bash script for a basemap tile
 
     Keyword arguments:
@@ -225,7 +182,7 @@ def write_gmt_script(output_dir, filename, Ztopo, region, rosePos):
     filename -- name of file to write
     Ztopo -- name of the geographic bathymetric grid in NetCDF format
     region -- geographic extent
-    rosePos -- position of the directional rose on the map
+    interval -- number of color palette intervals
     """
     out = open(output_dir+"/"+filename+'.sh', 'w')
     out.write('''#!/bin/bash
@@ -273,21 +230,21 @@ region={region}
 annot=0.5/0.25
 
 # Make a color palette
-grd2cpt $data -Cjet -V -Z > colorbar.cpt
+makecpt -Cjet -T{zmin}/{zmax}/{interval} -V -Z > colorbar.cpt
 
 # Create a hillshade
 grdgradient $data -Ne0.5 -A270 -G$data_i
 
 # Griddding
-grdimage $data -J$proj -R$region -Xa3c -Ya7.5c -Ccolorbar.cpt -I$data_i -Q -V -K > $out
+grdimage $data -J$proj -R$region -Xa3c -Ya8c -Ccolorbar.cpt -I$data_i -Q -V -K > $out
 
 # Background
-psbasemap -J$proj -R$region -B$annot -Xa3c -Ya7.5c -T{rosePos}/1.5c --HEADER_FONT_SIZE=0.5c -V -K -O >> $out
+psbasemap -J$proj -R$region -B$annot -Xa3c -Ya8c --HEADER_FONT_SIZE=0.5c -V -K -O >> $out
 
 # Append the legend
 pslegend -J$proj -R$region -Dx0.25c/0.25c/21.1c/4c/BL -F -V -O << EOF >> $out
 G -1c
-B colorbar.cpt 4c 0.5c -A -B20 --ANNOT_FONT_PRIMARY=1 --ANNOT_FONT_SIZE=10 -S
+B colorbar.cpt 4c 0.5c -A --ANNOT_FONT_PRIMARY=1 --ANNOT_FONT_SIZE=10 -S
 I logos.sun 4c RT
 G -2.6c
 L 8 1 L @;128/128/128;Title:@;;
@@ -313,7 +270,7 @@ rm colorbar.cpt
 rm $data_i
 
 convert -density 240 -flatten $out $tilename.gif
-'''.format(filename=filename, Ztopo=Ztopo, region=region, rosePos=rosePos))
+'''.format(filename=filename, Ztopo=Ztopo, region=region, zmin=zmin, zmax=zmax, interval=interval))
     out.close()
 
     

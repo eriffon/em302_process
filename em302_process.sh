@@ -3,7 +3,7 @@
 #
 # EM302 Processing Scripts for CCGS Amundsen Data
 # AUTHOR: Jean-Guy Nistad
-# VERSION: 16
+# VERSION: 17
 # DATE: 2015-04-29
 #
 # For next commit:
@@ -178,23 +178,26 @@ process_mb59() {
     printf "Applying bathymetric edits...\n" | tee -a $LOG
     cat $1 | awk -F '.' '{print $1}' > mb59_filenames
     touch mbset.sh | printf "#!/bin/bash\n\n" > mbset.sh
-    cat mb59_filenames | awk '{print "mbset -PEDITSAVEMODE:1 -PEDITSAVEFILE:" $1 ".mb59.esf -I " $1 ".mb59"}' >> mbset.sh
+    cat mb59_filenames | awk -v dir_mb59=$DIR_DATA_MB59 '{print "mbset -PEDITSAVEMODE:1 -PEDITSAVEFILE:" dir_mb59 "/" $1 ".mb59.esf -I " dir_mb59 "/" $1 ".mb59"}' >> mbset.sh
     chmod +x mbset.sh
     source mbset.sh
-    rm mbset.sh
     printf "...Done applying bathymetric edits.\n" | tee -a $LOG
     
     # Apply the tide
     
     # Process the mb59 files and create processed .mb59 files
-    printf "Creating processed .mb59 files..." | tee -a $LOG
+    # printf "Creating processed .mb59 files..." | tee -a $LOG
     mbprocess -I $DIR_DATA_MB59/$DATALIST_MB59
-    printf "...Done creating the processed mb59 files.\n" | tee -a $LOG
+    # printf "...Done creating the processed mb59 files.\n" | tee -a $LOG
    
     # Create the mb59 datalist of processed mb59 files
     printf "Creating the processed .mb59 datalist..." | tee -a $LOG
     printf "\$PROCESSED\n%s\n" $DATALIST_MB59 > $DIR_DATA_MB59/$DATALISTP_MB59
     printf "done.\n" | tee -a $LOG
+
+    # Cleanup
+    #rm mbset.sh
+    #rm mb59_filenames
 }
 
 
@@ -215,6 +218,9 @@ grid-map() {
     
     python $DIR_ROOT/anbasemap.py -D $DIR_SURFACES $1 $CELLSIZE 1
     printf "done.\n" | tee -a $LOG
+
+    # Clean up (comment out for debugging)
+    rm $DIR_SURFACES/*.grd.cmd
 }
 
 

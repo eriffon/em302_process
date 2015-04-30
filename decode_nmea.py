@@ -4,7 +4,7 @@
 # TITLE: decode_nmea.py
 # AUTHOR: Jean-Guy Nistad
 # LICENSE: Copyright (C) 2014  Jean-Guy Nistad
-# VERSION: 5
+# VERSION: 6
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -25,8 +25,6 @@ Decode NMEA-0183 GGA strings contained in a text file (update rate 1 Hz) and pro
 longitude latitude year julian_day hours minutes seconds
 
 The produced shiptrack file can then be used in Webtide in order to get a tidal track prediction.
-
-This code was used in the Amundsen 2014 expedition.
 """
 
 import argparse
@@ -174,11 +172,11 @@ def main():
     # Create a shiptrack file
     fileout = 'shiptrack-' + parsed_date['year'] + parsed_date['month'] + parsed_date['day'] + '.txt'
     f = open(fileout, 'w')
-#    df_parsed_data_resamp.to_csv(f, cols=['x', 'y', 'timestring'], header=False, index=False, sep=' ')
     webtide_shiptrack(f, df_parsed_data_resamp)
     f.close()
 
+    print fileout
+
 if __name__ == '__main__':
-    print 'Running as script...'
     main()
-    print 'Done with script.'
+
