@@ -114,7 +114,7 @@ def make_EHdr_grid(datalist, region, output_dir, tilename, cellsize):
     """
     # Grid
     print "Gridding with %s m cell size..." % (cellsize)
-    subprocess.call(["mbgrid", "-I", datalist, "-A2", "-F5", "-N", "-R"+region, "-JAmundsenLambert", "-E"+str(cellsize)+"/0.0/meters!", "-O", output_dir+"/"+tilename+"_Ztopo_lcc", "-V"])
+    subprocess.call(["mbgrid", "-I", datalist, "-A2", "-F5", "-N", "-R"+region, "-JAmundsen", "-E"+str(cellsize)+"/0.0/meters!", "-O", output_dir+"/"+tilename+"_Ztopo_lcc", "-V"])
 
     # Get the projected limits
     proj_limit_file = proj_limits(region, output_dir+"/"+tilename)
@@ -158,6 +158,8 @@ def make_gif_map(datalist, region, output_dir, tilename, logo, cellsize):
     zrange = subprocess.check_output("grdinfo %s | grep 'z_min'"  % (gridname+".grd"), shell=True)
     zmin = int(round_bounds(float(zrange.split(' ')[2]), base=1, direction='down'))
     zmax = int(round_bounds(float(zrange.split(' ')[4]), base=1, direction='up'))
+    print zmin
+    print zmax
 
     # Compute the color palette interval
     numBars=5
@@ -236,7 +238,7 @@ makecpt -Cjet -T{zmin}/{zmax}/{interval} -V -Z > colorbar.cpt
 grdgradient $data -Ne0.5 -A270 -G$data_i
 
 # Griddding
-grdimage $data -J$proj -R$region -Xa3c -Ya8c -Ccolorbar.cpt -I$data_i -Q -V -K > $out
+grdimage -E300 $data -J$proj -R$region -Xa3c -Ya8c -Ccolorbar.cpt -I$data_i -Q -V -K > $out
 
 # Background
 psbasemap -J$proj -R$region -B$annot -Xa3c -Ya8c --HEADER_FONT_SIZE=0.5c -V -K -O >> $out
@@ -332,12 +334,16 @@ def main():
             # Region of the tile
             region = "%.1f/%.1f/%.2f/%.2f" % (x, x+lon_step, y-lat_step, y)
 
-            # See if data is contained within the current tile
-            data_records = subprocess.check_output("mbinfo -F-1 -G -I %s -R %s | grep 'Number of Records:'" % (args.datalist, region), shell=True)
-            numRec = int(data_records.split(':')[1].strip())
+            # Create a new datalist called 'tile_datalist.mb-1' for the specific tile
+            subprocess.check_output("mbdatalist -F-1 -I %s -R%s > tile_datalist.mb-1" % (args.datalist, region), shell=True)
 
+            # Access the new datalist and check it's size
+            f_datalist = open('tile_datalist.mb-1')
+            f_datalist.seek(0,2)
+            datalist_size = f_datalist.tell()
+            
             # Execute main action if there is data to work on
-            if (numRec > 0):
+            if (datalist_size > 0):
                 if ((args.action == K_EHDR_GRD) or (args.action == K_EHDR_AND_GIF)):
                     make_EHdr_grid(args.datalist, region, args.outputDir, tilename, args.cellsize)
                 if ((args.action == K_GIF_MAP) or (args.action == K_EHDR_AND_GIF)):
@@ -345,7 +351,11 @@ def main():
             else:
                 print "No data to grid for tilename %s!" % (tilename)
 
-            
+            # Close the datalist file
+            f_datalist.close()
+
+            # Remove the tile datalist
+            subprocess.call(["rm", "tile_datalist.mb-1"])
             
 if __name__ == '__main__':
     print 'Running as script...'

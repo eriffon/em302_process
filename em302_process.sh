@@ -3,7 +3,7 @@
 #
 # EM302 Processing Scripts for CCGS Amundsen Data
 # AUTHOR: Jean-Guy Nistad
-# VERSION: 17
+# VERSION: 18
 # DATE: 2015-04-29
 #
 # For next commit:
@@ -196,8 +196,8 @@ process_mb59() {
     printf "done.\n" | tee -a $LOG
 
     # Cleanup
-    #rm mbset.sh
-    #rm mb59_filenames
+    rm mbset.sh
+    rm mb59_filenames
 }
 
 
