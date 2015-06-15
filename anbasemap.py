@@ -259,7 +259,7 @@ L 8 1 L @;128/128/128;Projection:@;;
 L 8 1 L Lambert Conic Conformal
 G 0.1c
 L 8 1 L @;128/128/128;Horizontal Datum:@;;
-L 8 1 L WGS84(G1150)
+    L 8 1 L WGS84(G1674)
 G 0.1c
 L 8 1 L @;128/128/128;Vertical Datum:@;;
 L 8 1 L Mean Sea Level

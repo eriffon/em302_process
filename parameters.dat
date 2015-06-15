@@ -15,10 +15,10 @@
 DIR_ROOT=$(pwd)
 
 # Path to the .all files to read
-DIR_DATA_ALL=$DIR_ROOT/all/2015_01_leg1_experiment
+DIR_DATA_ALL=$DIR_ROOT/all/Calibration
 
 # Path to where the .mb59 files should be written
-DIR_DATA_MB59=$DIR_ROOT/mb59/2015_01_leg1_experiment
+DIR_DATA_MB59=$DIR_ROOT/mb59/Calibration
 
 # Path to the .gsf files should be read
 DIR_DATA_GSF=$DIR_ROOT/gsf
