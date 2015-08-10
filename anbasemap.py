@@ -152,7 +152,7 @@ def make_gif_map(datalist, region, output_dir, tilename, logo, cellsize):
     print "Gridding with %s m cell size..." % (cellsize)
     gridname = output_dir+"/"+tilename+"_Ztopo"
     print gridname
-    subprocess.call(["mbgrid", "-I", datalist, "-A2", "-F5", "-N", "-R"+region, "-E"+str(cellsize)+"/0.0/meters!", "-O", gridname, "-V"])
+    subprocess.call(["mbgrid", "-I", datalist, "-A2", "-F5", "-N", "-M", "-R"+region, "-E"+str(cellsize)+"/0.0/meters!", "-O", gridname, "-V"])
 
     # Get the zmin and zmax of the grid
     zrange = subprocess.check_output("grdinfo %s | grep 'z_min'"  % (gridname+".grd"), shell=True)
@@ -184,6 +184,8 @@ def write_gmt_script(output_dir, filename, Ztopo, region, zmin, zmax, interval):
     filename -- name of file to write
     Ztopo -- name of the geographic bathymetric grid in NetCDF format
     region -- geographic extent
+    zmin --
+    zmax --
     interval -- number of color palette intervals
     """
     out = open(output_dir+"/"+filename+'.sh', 'w')
@@ -259,7 +261,7 @@ L 8 1 L @;128/128/128;Projection:@;;
 L 8 1 L Lambert Conic Conformal
 G 0.1c
 L 8 1 L @;128/128/128;Horizontal Datum:@;;
-    L 8 1 L WGS84(G1674)
+L 8 1 L WGS84(G1674)
 G 0.1c
 L 8 1 L @;128/128/128;Vertical Datum:@;;
 L 8 1 L Mean Sea Level
