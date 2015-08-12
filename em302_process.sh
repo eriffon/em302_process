@@ -385,9 +385,14 @@ em302_process_help() {
     eU=$(tput rmul) # end underline font
     bB=$(tput smso) # begin bold font
     eB=$(tput rmso) # end bold font
-    
-    printf "Basic usage: $0 [-A -B -C -D${bU}colortable${eU} -E${bU}datalist${eU} -H -M${bU}datalist${eU} -P${bU}datalist${eU} -T${bU}nmeafile${eU} -U]\n\n"
 
+    printf "\nProgram em302_process\n"
+    printf "Version 1.0\n\n"
+    printf "em302_process is a high-level bash shell script used to process EM302 multibeam bathymetry data\n"
+    printf "collected by the Canadian ice-breaker CCGS Amundsen. em302_process is a front-end to MB-System\n"
+    printf "and some python scripts specifically written to produce the two fundamental datasets of the Canadian\n"
+    printf "Arctic Mapping program: 15'x30' basemap tiles in ESRI Grids (.EHdr) format and 15'x30' maps in GIF format.\n\n"
+    printf "usage: $0 [-A -B -C -D${bU}colortable${eU} -E${bU}datalist${eU} -H -M${bU}datalist${eU} -P${bU}datalist${eU} -T${bU}nmeafile${eU} -U]\n\n"
     printf "For a detailed description, type: ${bB}man ./em302_process.1${eB}.\n"
 }
 
