@@ -5,8 +5,6 @@
 # TITLE: anbasemap.py
 # AUTHOR: Jean-Guy Nistad
 # DESCRIPTION: Create the ArcticNet 15' x 30' basemap tiles based on a given MB-System datalist
-# DATE: April 25th, 2015
-# VERSION: 1
 # 
 # Copyright (C) 2015  Jean-Guy Nistad
 #
