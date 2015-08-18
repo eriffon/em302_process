@@ -31,11 +31,19 @@ class Basetile(object):
 
 
     # Class attributes
-    suffix = {'grid': '_Ztopo_lcc', 'mask': '_mask', 'tile': '_tile', 'polygon': '_lcc_coord.txt', 'psmap': '_ZtopoSun'}
-    extension = {'grd': '.grd', 'flt': '.flt', 'cmd': '.cmd'}
+    __suffix = {'grid': '_Ztopo_lcc', \
+                'mask': '_mask', \
+                'tile': '_tile', \
+                'polygon': '_lcc_coord.txt', \
+                'psmap': '_ZtopoSun', \
+                'psmap_lcc': '_ZtopoSun_lcc'}
+    
+    __extension = {'grd': '.grd', \
+                   'flt': '.flt', \
+                   'cmd': '.cmd'}
     
 
-    def get_region(self, region, src_proj, dst_proj):
+    def __get_region(self, region, src_proj, dst_proj):
         """Extract all components of the region in geodesic and projected coordinates
 
         Keyword argument:
@@ -75,22 +83,28 @@ class Basetile(object):
         cellsize -- the spatial resolution of the tile
         """
         PROJ4_LCC = "+proj=lcc +lat_1=70 +lat_2=73 +lat_0=70 +lon_0=-105 +x_0=2000000 +y_0=2000000 +datum=WGS84 +units=m +no_defs" 
-        PROJ4_GEO  = "+proj=latlong +datum=WGS84"
+        PROJ4_GEO = "+proj=latlong +datum=WGS84"
+        GMT_SCALE = "-105/70/70/73/"
+        GMT_PROJ = "l"
         
         # Instance attributes
         self.name = name
-        self.region = self.get_region(region, PROJ4_GEO, PROJ4_LCC)
+        self.region = self.__get_region(region, PROJ4_GEO, PROJ4_LCC)
         self.cellsize = cellsize
-        self.proj_lcc = PROJ4_LCC
-        self.proj_geo = PROJ4_GEO
-        self.nc_grid_no_ext = self.name+self.suffix['grid']
-        self.nc_grid = self.nc_grid_no_ext+self.extension['grd']
-        self.nc_grid_mask = self.nc_grid_no_ext+self.suffix['mask']+self.extension['grd']
-        self.nc_grid_tile = self.nc_grid_no_ext+self.suffix['tile']+self.extension['grd']
-        self.nc_cmd_script = self.nc_grid+self.extension['cmd']
-        self.esri_grid = self.nc_grid_no_ext+self.suffix['tile']+self.extension['flt']
-        self.ps_map_no_ext = self.name+self.suffix['psmap']
-        self.ps_map_shell = self.ps_map_no_ext+self.extension['cmd']
+        self.proj4_proj_lcc = PROJ4_LCC
+        self.proj4_proj_geo = PROJ4_GEO
+        self.gmt_proj = GMT_PROJ
+        self.gmt_scale = GMT_SCALE
+        self.nc_grid_no_ext = self.name+self.__suffix['grid']
+        self.nc_grid = self.nc_grid_no_ext+self.__extension['grd']
+        self.nc_grid_mask = self.nc_grid_no_ext+self.__suffix['mask']+self.__extension['grd']
+        self.nc_grid_tile = self.nc_grid_no_ext+self.__suffix['tile']+self.__extension['grd']
+        self.nc_cmd_script = self.nc_grid+self.__extension['cmd']
+        self.esri_grid = self.nc_grid_no_ext+self.__suffix['tile']+self.__extension['flt']
+        self.ps_map_no_ext = self.name+self.__suffix['psmap']
+        self.ps_map_shell = self.ps_map_no_ext+self.__extension['cmd']
+        self.ps_map_lcc_no_ext = self.name+self.__suffix['psmap_lcc']
+        self.ps_map_lcc_shell = self.ps_map_lcc_no_ext+self.__extension['cmd']
         
         
     def __str__(self):
@@ -113,7 +127,7 @@ class Basetile(object):
         import pyproj
        
         # Open a file to store results
-        filename = outdir+self.name+self.suffix['polygon']
+        filename = outdir+self.name+self.__suffix['polygon']
         out = open(filename, 'w')
 
         # Print to file
@@ -144,7 +158,7 @@ class Basetile(object):
         outdir -- directory path in which to store the grid
         """
         if not(path.isfile(datalist)):
-            print "Error: no such file %s found" % (datalist)
+            print "\nError: no such file %s found.\n" % (datalist)
             exit(-1)
         
         # Grid
@@ -208,16 +222,86 @@ class Basetile(object):
         Keyword arguments:
         outdir -- directory path in which to store the grid
         """
-        # Convert NetCDF grid to ESRI Grid
-        try:
-            subprocess.check_call(['which', 'gdal_translate'])
-        except subprocess.CalledProcessError:
-            print "\nCould not call gdal_translate! Please make sure GDAL is properly installed\n."
-            exit(-1)
-        else:                
-            subprocess.call(["gdal_translate", "-a_srs", self.proj_lcc, "-of", "EHdr", "-a_nodata", "-99999", outdir+self.nc_grid_tile, outdir+self.esri_grid])
+        if path.isfile(outdir+self.nc_grid_tile):
+            # Convert NetCDF grid to ESRI Grid
+            try:
+                subprocess.check_call(['which', 'gdal_translate'])
+            except subprocess.CalledProcessError:
+                print "\nCould not call gdal_translate! Please make sure GDAL is properly installed\n."
+                exit(-1)
+            else:                
+                subprocess.call(["gdal_translate", "-a_srs", self.proj4_proj_lcc, "-of", "EHdr", "-a_nodata", "-99999", outdir+self.nc_grid_tile, outdir+self.esri_grid])
+        else:
+            print "\nError: NetCDF file %s not found!\n" % (self.nc_grid_tile)
 
 
+    def lam2geo_carto(self, org_cmd, new_cmd):
+        """Modify a c-shell script generated by MB-System's mb_grdplot command to replace the default Lambert basemap to a geographic basemap
+
+        Keyword arguments:
+        org_cmd -- name of the original c-shell script
+        new_cmd -- name of the modified c-shell script
+        """
+        org_cmd_f = open(org_cmd, 'r')
+        new_cmd_f = open(new_cmd, 'w')
+
+        sections = {}
+
+        org_lines = org_cmd_f.readlines()
+        new_lines = org_lines
+        
+        for index, line in enumerate(org_lines):
+            if 'shell variables' in line:
+                if not sections.has_key('shell variable'):
+                    sections['shell variable'] = {}
+                    for i in range(6):
+                        (key,val) = org_lines[index+i+1].split('=',1)
+                        key = key.strip()
+                        val = val.strip()
+                        sections['shell variable'][key] = val
+
+                # Modify the output Postcript filename
+                sections['shell variable']['set PS_FILE'] = sections['shell variable']['set PS_FILE']. \
+                                                            replace(self.__suffix['psmap'], self.__suffix['psmap_lcc'])
+                new_lines[index + 1] = "set PS_FILE         = %s\n" % (sections['shell variable']['set PS_FILE'])
+
+                # Modify the output CPT filename
+                sections['shell variable']['set CPT_FILE'] = sections['shell variable']['set CPT_FILE']. \
+                                                            replace(self.__suffix['psmap'], self.__suffix['psmap_lcc'])
+                new_lines[index + 2] = "set CPT_FILE        = %s\n" % (sections['shell variable']['set CPT_FILE'])
+
+                # Add a Lambert projection for psbasemap
+                sections['shell variable']['set MAP_PROJECTION2'] = 'l'
+                new_lines.insert(index + 4, "set MAP_PROJECTION2 = %s\n" % (sections['shell variable']['set MAP_PROJECTION2']))
+
+                # Compute the plot width
+                xmax = float(self.region['lr'][0])
+                xmin = float(self.region['ul'][0])
+                map_scale = float(sections['shell variable']['set MAP_SCALE'])
+                plot_width = map_scale * (xmax - xmin)
+
+                # Add the map scale for psbasemap
+                sections['shell variable']['set MAP_SCALE2'] = self.gmt_scale+str(plot_width)
+                new_lines.insert(index + 6, "set MAP_SCALE2      = %s\n" % (sections['shell variable']['set MAP_SCALE2']))
+                          
+                # Add the geographic region for psbasemap
+                sections['shell variable']['set MAP_REGION2'] = self.region['geo']
+                new_lines.insert(index + 8, "set MAP_REGION2     = %s\n" % (sections['shell variable']['set MAP_REGION2']))
+
+            elif 'PAPER_MEDIA' in line:
+                new_lines[index] = "gmtset PAPER_MEDIA Letter\n"
+                
+            elif 'Make basemap' in line:
+                new_lines[index + 2] = "psbasemap -J$MAP_PROJECTION2$MAP_SCALE2 \ \n"
+                new_lines[index + 3] = "        -R$MAP_REGION2 \ \n"
+                new_lines[index + 4] = "        -B5m/5m \ \n"
+
+        # Write the new cmd script
+        for index in new_lines:
+            new_cmd_f.write("%s" % index)
+                
+        new_cmd_f.close()
+            
             
     def make_ps_map(self, outdir):
         """Make a Postscript map from the pre-generated NetCDF grid
@@ -225,22 +309,32 @@ class Basetile(object):
         Keyword arguments:
         outdir -- directory path in which to store the map
         """
-        try:
-            subprocess.check_call(['which', 'mbm_grdplot'])
-        except subprocess.CalledProcessError:
-            print "\nCould not call mbm_grdplot! Please make sure MB-Sysem is properly installed\n."
-            exit(-1)
-        else:
-            print "Ploting..."
-            subprocess.call(["mbm_grdplot", "-I", outdir+self.nc_grid_tile, \
-                             "-O", outdir+self.ps_map_no_ext, \
-                             "-G2", "-A0.5/270/15", "-D", \
-                             "-PA4", "-V"])
+        if path.isfile(outdir+self.nc_grid_tile):
+            try:
+                subprocess.check_call(['which', 'mbm_grdplot'])
+            except subprocess.CalledProcessError:
+                print "\nCould not call mbm_grdplot! Please make sure MB-Sysem is properly installed\n."
+                exit(-1)
+            else:
+                print "Ploting..."
+                subprocess.call(["mbm_grdplot", "-I", outdir+self.nc_grid_tile, \
+                                 "-O", outdir+self.ps_map_no_ext, \
+                                 "-G2", "-A0.5/270/15", "-D", \
+                                 "-PA4", "-V"])
 
-        try:
-            subprocess.check_call(['which', 'csh'])
-        except subprocess.CalledProcessError:
-            print "\nCould not call csh! Please make sure that the c-shell is properly installed\n."
-            exit(-1)
+            # Modify cmd script to replace basemap from Lambert to geographic
+            lam2geo_carto(outdir+self.ps_map_shell, outdir+self.ps_map_lcc_shell)
+
+            try:
+                subprocess.check_call(['which', 'csh'])
+            except subprocess.CalledProcessError:
+                print "\nCould not call csh! Please make sure that the c-shell is properly installed\n."
+                exit(-1)
+            else:
+                subprocess.call(["csh", outdir+self.ps_map_shell])
         else:
-            subprocess.call(["csh", outdir+self.ps_map_shell])
+            print "\nError: NetCDF file %s not found!\n" % (self.nc_grid_tile)
+
+
+        
+                

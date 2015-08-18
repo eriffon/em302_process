@@ -390,9 +390,10 @@ em302_process_help() {
     printf "Version 1.0\n\n"
     printf "em302_process is a high-level bash shell script used to process EM302 multibeam bathymetry data\n"
     printf "collected by the Canadian ice-breaker CCGS Amundsen. em302_process is a front-end to MB-System\n"
-    printf "and some python scripts specifically written to produce the two fundamental datasets of the Canadian\n"
-    printf "Arctic Mapping program: 15'x30' basemap tiles in ESRI Grids (.EHdr) format and 15'x30' maps in GIF format.\n\n"
-    printf "usage: $0 [-A -B -C -D${bU}colortable${eU} -E${bU}datalist${eU} -H -M${bU}datalist${eU} -P${bU}datalist${eU} -T${bU}nmeafile${eU} -U]\n\n"
+    printf "and some python scripts specifically written to produce the three fundamental datasets of the Canadian\n"
+    printf "Arctic Mapping program: 15'x30' basemap tiles in ESRI Grids (.EHdr) raster format, 15'x30' maps in\n"
+    printf "Postscript and GIF formats.\n\n"
+    printf "usage: $0 [-A -B -C -D${bU}colortable${eU} -H -P${bU}datalist${eU} -S${bU}nmeafile${eU} -T${bU}west${eU}/${bU}east${eU}/${bU}south${eU}/${bU}north${eU}[e][p][g] -U]\n\n"
     printf "For a detailed description, type: ${bB}man ./em302_process.1${eB}.\n"
 }
 
@@ -403,7 +404,7 @@ em302_process_help() {
 
 # Set the project Metadata
 if [ ! -f parameters.dat ]; then
-    printf "Warning! No parameter file found: parameters.dat\n"
+    printf "Warning! No parameter file found. Make sure that the parameters.dat file exists in the current execution directory.\n"
     exit 1
 fi
 chmod +x parameters.dat
