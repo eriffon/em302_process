@@ -4,8 +4,7 @@
 #
 # TITLE: geospatial.py
 # AUTHOR: Jean-Guy Nistad
-# DATE: March 6th, 2015
-# VERSION: 2
+# DESCRIPTION: Library of common geospatial functions
 # 
 # Copyright (C) 2015  Jean-Guy Nistad
 #
@@ -22,10 +21,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ########################################################################################################
-
-"""
-Library of common geospatial functions
-"""
 
 
 def decdeg2dms(dd):

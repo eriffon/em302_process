@@ -74,9 +74,13 @@ Creates a shiptrack from the specified \fBNMEA_logger\fP file. \fBNMEA_logger\fP
 .B \-T
 \fIwest\fP/\fIeast\fP/\fIsouth\fP/\fInorth\fP[e][p][g]
 .br
-Creates \fBArcticNet Basemap\fP tiles of 15' latitude x 30' longitude for the geographic region of interest bounded by the \fIwest\fP, \fIeast\fP, \fIsouth\fP and \fInorth\fP coordinates. By default, the command will produce the tiles as a georeferenced ESRI Grid raster in ESRI EHdr (.hdr) format and as cartographic maps in Postscript (.ps) and image (.gif) formats. The user may limit the creation to any of the three products by specifying the optional \fBe\fP (ESRI Grid raster only), \fBp\fP (Postscript only) and \fBg\fP (image only) flags.
+Creates \fBArcticNet Basemap\fP tiles of 15' latitude x 30' longitude for the geographic region of interest bounded by the \fIwest\fP, \fIeast\fP, \fIsouth\fP and \fInorth\fP coordinates. The program will use the datalist pointed to by the variable $HIGH_DATALIST (see \fIparameters.dat\fP file). By default, the command will produce the tiles as georeferenced rasters in netCDF (.grd) and ESRI Grid (EHdr .hdr Labelled) formats, and as cartographic maps in Postscript (.ps) and image (.gif) formats. The user may limit the creation to any of the three products by specifying the optional \fBe\fP (ESRI Grid raster only), \fBp\fP (Postscript only) and \fBg\fP (image only) flags.
 
 The following sections list the unique files associated with each product:
+
+\fBNetCDF Raster\fP
+    - a .grd binary file,
+    - a .mb-1 ASCII file containing the filenames of the survey lines that are part of the tile.
 
 \fBESRI Grid Raster\fP
     - a .flt binary file,
@@ -86,6 +90,7 @@ The following sections list the unique files associated with each product:
 
 \fBPostscript\fP
     - a .ps Postscript file,
+    - a .cmd GMT c-shell script that generates the Postscript file,
     - a .mb-1 ASCII file containing the filenames of the survey lines that are part of the tile.
 
 \fBImage\fP

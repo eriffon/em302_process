@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 
 ########################################################################################################
+#
 # TITLE: decode_nmea.py
 # AUTHOR: Jean-Guy Nistad
-# LICENSE: Copyright (C) 2014  Jean-Guy Nistad
-# VERSION: 6
+#
+# Copyright (C) 2015  Jean-Guy Nistad
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,8 +22,10 @@
 ########################################################################################################
 
 """
-Decode NMEA-0183 GGA strings contained in a text file (update rate 1 Hz) and produced a downsampled (update rate 0.00167 Hz; basically, 1 value every 10 minutes) shiptrack file containing the following space separated columns:
-longitude latitude year julian_day hours minutes seconds
+Decode NMEA-0183 GGA strings contained in a text file (update rate 1 Hz) and produced a downsampled
+(update rate 0.00167 Hz; basically, 1 value every 10 minutes) shiptrack file containing the following
+ space separated columns:
+                      longitude latitude year julian_day hours minutes seconds
 
 The produced shiptrack file can then be used in Webtide in order to get a tidal track prediction.
 """
@@ -32,6 +35,15 @@ from datetime import datetime as dt
 import pandas as pd
 
 def gga(line, date):
+    """Parse position from GGA sentence
+
+    Keyword arguments:
+    line -- an NMEA sentence
+    date -- julian date
+
+    Returns:
+    A dictionnary for the GGA sentence
+    """
     if 'GGA' not in line:
         return None
 
@@ -91,8 +103,13 @@ def gga(line, date):
 
 
 def vtg(line):
-    """
-    Parse course over ground and ground speed
+    """Parse ground speed and heading from VTG sentence
+
+    Keyword arguments:
+    line -- an NMEA sentence
+
+    Returns:
+    A dictionnary for the VTG sentence
     """
     if 'VTG' not in line:
         return None
@@ -109,8 +126,17 @@ def vtg(line):
     return results
 
 
-# Create a generator that will loop over a file
+
 def parse_nmea_file(filename, date):
+    """Create a generator that will loop over a file
+
+    Keyword arguments:
+    filename -- name of the NMEA file
+    date -- the julian date
+
+    Returns:
+    All the GGA lines in the file
+    """
     strings = [ ]
     for line in open(filename):
         if 'GGA' in line:
@@ -122,7 +148,14 @@ def parse_nmea_file(filename, date):
 
 
 def parse_date(filename):
-    # Initialize the dictionary
+    """Parse the date information from a NMEA filename
+
+    Keyword arguments:
+    filename -- name of the NMEA file
+
+    Returns:
+    A dictionary with the day, month and year metadata
+    """
     results = { }
 
     results['day'] = filename[0:2]
@@ -132,13 +165,18 @@ def parse_date(filename):
     return results
 
 
-# Write and output shiptrack file for webtide
+
 def webtide_shiptrack(f, df):
+    """Write and output shiptrack file for webtide
+
+    Keyword arguments:
+    f -- filename to write to
+    df -- pandas DataFrame
+    """
     for i in range(len(df)):
         time = df.index[i]
         timestr = time.strftime('%Y %j %H %M %S')
         f.write('%s %s %s\n' % (df.x[i], df.y[i], timestr))
-        #f.write('%s %s %s %s %s %s %s\n' % (i['x'], i['y'], date['year'], date['julian'], i['hours'], i['min'], i['sec']))
         f.flush()
 
 

@@ -4,7 +4,6 @@
 #
 # TITLE: anbasemap.py
 # AUTHOR: Jean-Guy Nistad
-# DESCRIPTION: Create the ArcticNet 15' x 30' basemap tiles based on a given MB-System datalist
 # 
 # Copyright (C) 2015  Jean-Guy Nistad
 #
@@ -23,11 +22,7 @@
 ########################################################################################################
 
 """
-
-For next commit:
-   - removed the directional rose
-   - removed attempt to use NetCDF files
-
+Create the ArcticNet 15' x 30' basemap tiles based on a given MB-System datalist
 """
 
 import math as m
@@ -37,7 +32,7 @@ import os.path
 import subprocess
 import numpy as np
 import geospatial as geo
-
+import basetile as bt
 
     
 def round_bounds(x, base=0.5, direction='up'):
@@ -278,86 +273,92 @@ convert -density 240 -flatten $out $tilename.gif
     
 
 def main():
-    K_EHDR_GRD = 0
-    K_GIF_MAP = 1
-    K_EHDR_AND_GIF = 2
+    LON_STEP = 0.5
+    LAT_STEP = 0.25
     
-    parser = argparse.ArgumentParser(description="Create the ArcticNet 15' x 30' basemap tiles based on a given MB-System datalist")
-    parser.add_argument('datalist', type=str, help='MB-System datalist to process')
-    parser.add_argument('-D', '--outputDir', help='output directory in which to store the products')
+    parser = argparse.ArgumentParser(description= \
+                                     "Create the ArcticNet 15' x 30' basemap tiles based on a given MB-System datalist, region and spatial resolution")
+    parser.add_argument('datalist', type=str, help='MB-System datalist')
+    parser.add_argument('region', type=str, help='region in west/east/south/north format')
+    parser.add_argument('createopts', type=str, help='creation options as esri grid (e), postscript (p), image (g)')
+    parser.add_argument('cellsize', type=float, help='cellsize')
+    parser.add_argument('-D', '--outdir', help='output directory in which to store the products')
     parser.add_argument('-l', '--logo', default='logos.sun', help='logo to display in legend. Default: logos.sun')
-    parser.add_argument('cellsize', type=float, help='cell size')
-    parser.add_argument('action', type=int, choices=[0,1,2], help='action to be performed. 0=make EHdr grid; 1=make GIF map; 2=make both')
     args = parser.parse_args()
- 
-    lon_step = 0.5
-    lat_step = 0.25
-  
+   
     # Check that mb-system is installed
     try:
         subprocess.check_call(['which', 'mbinfo'])
     except subprocess.CalledProcessError:
         print 'Could not call mbinfo! Please make sure MB-Sysem is properly installed.'
         exit()
-    else:
-        print 'Running mbinfo...'     
-        
-    # Get the true bounds of datalist
-    bounds = subprocess.check_output("mbinfo -F-1 -G -I %s | grep -E 'Longitude|Latitude'"  % (args.datalist), shell=True)   
-    xmin_true = bounds.splitlines()[0].split()[2]
-    xmax_true = bounds.splitlines()[0].split()[5]
-    ymin_true = bounds.splitlines()[1].split()[2]
-    ymax_true = bounds.splitlines()[1].split()[5]
 
+    # Split the region boundaries    
+    (xmin_true, xmax_true, ymin_true, ymax_true) = args.region.split('/')
+    
     # Compute the bounds for the ArcticNet basemap tiles
-    xmin_tile = round_bounds(xmin_true, lon_step, 'down')
-    xmax_tile = round_bounds(xmax_true, lon_step, 'up')
-    ymin_tile = round_bounds(ymin_true, lat_step, 'down')
-    ymax_tile = round_bounds(ymax_true, lat_step, 'up')
-
+    xmin_tile = round_bounds(xmin_true, LON_STEP, 'down')
+    xmax_tile = round_bounds(xmax_true, LON_STEP, 'up')
+    ymin_tile = round_bounds(ymin_true, LAT_STEP, 'down')
+    ymax_tile = round_bounds(ymax_true, LAT_STEP, 'up')
+    
     # Create the loop lists
-    xsteps = (xmax_tile - xmin_tile) / lon_step
-    ysteps = (ymax_tile - ymin_tile) / lat_step
+    xsteps = (xmax_tile - xmin_tile) / LON_STEP
+    ysteps = (ymax_tile - ymin_tile) / LAT_STEP
     lon = np.linspace(xmin_tile, xmax_tile, num=xsteps, endpoint=False)
     lat = np.linspace(ymax_tile, ymin_tile, num=ysteps, endpoint=False)
-  
-    # Main loop over tiles from top-left corner
-    cnt = 0
-    for y in lat:
-        yd, ym, ys, yh = geo.decdeg2dms_hem(y, 'lat')
-        for x in lon:
-            cnt = cnt + 1
-            xd, xm, xs, xh = geo.decdeg2dms_hem(x, 'lon')
-            tilename = "%.2d_%.2d_%.2d_%c_%.2d_%.2d_%.2d_%c" % (yd, ym, ys, yh, xd, xm, xs, xh)
-            print "Creating basemap tile %d for tilename %s..." % (cnt, tilename)
 
-            # Region of the tile
-            region = "%.1f/%.1f/%.2f/%.2f" % (x, x+lon_step, y-lat_step, y)
+    # Create a new sub-datalist with filename composed with region extent
+    subdatalist = 'mbdatalist'+'_'+str(xmin_true)+'_'+str(xmax_true)+'_'+str(ymin_true)+'_'+str(ymax_true)+'.mb-1'
+    print "Running mbdatalist to generate datalist %s.\n"  % (subdatalist)
+    print "Please be patient. This may take some time...\n"
+    subprocess.check_output("mbdatalist -F-1 -I %s -R%s > %s" % (args.datalist, args.region, subdatalist), shell=True)
 
-            # Create a new datalist called 'tile_datalist.mb-1' for the specific tile
-            subprocess.check_output("mbdatalist -F-1 -I %s -R%s > tile_datalist.mb-1" % (args.datalist, region), shell=True)
+    # Access the sub-datalist and check it's size
+    f_datalist = open(subdatalist)
+    f_datalist.seek(0,2)
+    subdatalist_size = f_datalist.tell()
 
-            # Access the new datalist and check it's size
-            f_datalist = open('tile_datalist.mb-1')
-            f_datalist.seek(0,2)
-            datalist_size = f_datalist.tell()
-            
-            # Execute main action if there is data to work on
-            if (datalist_size > 0):
-                if ((args.action == K_EHDR_GRD) or (args.action == K_EHDR_AND_GIF)):
-                    make_EHdr_grid(args.datalist, region, args.outputDir, tilename, args.cellsize)
-                if ((args.action == K_GIF_MAP) or (args.action == K_EHDR_AND_GIF)):
-                    make_gif_map(args.datalist, region, args.outputDir, tilename, args.logo, args.cellsize)
-            else:
-                print "No data to grid for tilename %s!" % (tilename)
+    if (subdatalist_size > 0):   
+        # Main loop over tiles from top-left corner
+        cnt = 0
+        for y in lat:
+            yd, ym, ys, yh = geo.decdeg2dms_hem(y, 'lat')
+            for x in lon:
+                cnt = cnt + 1
+                xd, xm, xs, xh = geo.decdeg2dms_hem(x, 'lon')
+                tilename = "%.2d_%.2d_%c_%.2d_%.2d_%c" % (yd, ym, yh, xd, xm, xh)
+                print "Creating basemap tile %d for tilename %s..." % (cnt, tilename)
 
-            # Close the datalist file
-            f_datalist.close()
+                # Region of the tile
+                region = "%.1f/%.1f/%.2f/%.2f" % (x, x+LON_STEP, y-LAT_STEP, y)
+          
+                if ('e' in args.createopts) or ('p' in args.createopts) or ('g' in args.createopts):                   
+                    tile = bt.Basetile(tilename, region, args.cellsize)
 
-            # Remove the tile datalist
-            subprocess.call(["rm", "tile_datalist.mb-1"])
+                    print "Making a netCDF Grid for tile %s" % (tilename)
+                    tile.make_netcdf_grid(subdatalist, args.outdir)
+
+                    # Generate products according to selected creation options
+                    if 'e' in args.createopts:
+                        print "Making a ESRI Grid for tile %s" % (tilename)
+                        tile.make_esri_grid(args.outdir)
+                    if 'p' in args.createopts:
+                        print "Making a Postscript map for tile %s" % (tilename)
+                        tile.make_ps_map(args.outdir, args.logo)
+                    if 'g' in args.createopts:
+                        print "Making an image map for tile %s" % (tilename)
+                        tile.make_gif_map(args.outdir, args.logo)
+                else:
+                    print "Error: wrong creation options!\n"
+    else:
+        print "No data to grid for tilename %s!" % (tilename)
+
+    # Close the datalist file
+    f_datalist.close()
+
             
 if __name__ == '__main__':
-    print 'Running as script...'
+    # print 'Running as script...'
     main()
-    print 'Done with script.'
+    # print 'Done with script.'

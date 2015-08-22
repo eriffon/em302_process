@@ -1,14 +1,32 @@
 #!/bin/bash
-####################################################################################################################################
+########################################################################################################
 #
 # TITLE: em302_process.sh
 # AUTHOR: Jean-Guy Nistad
-# DESCRIPTION:
-#      Main processing script for the Kongsberg EM302 multibeam data on board CCGS Amundsen Data
-# REQUIRED PROGRAMS:
-#      - MB-System version 5.4.22.20
-###################################################################################################################################
+# 
+# Copyright (C) 2015  Jean-Guy Nistad
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+########################################################################################################
 
+###
+# Main processing script for the Kongsberg EM302 multibeam data on board CCGS Amundsen Data
+#
+# Required programs:
+#         - MB-System version 5.4.22.20
+#         - ImageMagick
+###
 
 #
 # MERGE_EDITS() - Merge edits from .gsf files produced from CARIS HIPS & SIPS
@@ -198,27 +216,38 @@ process_mb59() {
 
 
 #
-# GRID-MAP(DATALIST) - Grid the mb59 files listed in the datalist and produce a postscript and a .gif file for each basemap tile
+# MAKE-TILES(PARAMETER) - Makes the ArcticNet basemap tiles for the specified region and product options
 #
-grid-map() {
-    printf "\n\n\n" | tee -a $LOG
+make_tiles() {
+    printf "\n\n" | tee -a $LOG
     printf "###########################################################################################" | tee -a $LOG
     printf "\n\n" | tee -a $LOG
-    printf "%s UTC: Making postscript and .gif GMT tilemaps at %s m resolution from the %s MB-System datalist.\n\n" $(date --utc +%Y%m%d-%H%M%S) $CELLSIZE $1 | tee -a $LOG
+
+    # Make sure that datalist datalist.mb-1 is in the current directory
+    if [ ! -f $DIR_ROOT/$HIGH_DATALIST ]; then
+    	printf "Error! The MB-System high-level datalist $DIR_ROOT/$HIGH_DATALIST was not found!\n"
+    	exit 1
+    fi
     
     # Make sure that a logo file exists in the output directory
     if [ ! -f $DIR_SURFACES/logos.sun ]; then
-	cp logos.sun $DIR_SURFACES
+    	cp logos.sun $DIR_SURFACES
     fi
 
-    # Call the anbasemap.py python script
-    printf "Launching the anbasemap.py python script." | tee -a $LOG
-    python $DIR_ROOT/anbasemap.py -D $DIR_SURFACES $1 $CELLSIZE 1
+    # Parse the creation options
+    region=`echo $1 | sed 's/[epg]\{0,3\}$//g'`
+    options=`echo $1 | grep -E -o [[epg]\{0,3\}$`
+    if [ -z $options ]; then
+	# $options is empty --> all products are wanted
+	options="epg"
+    fi
+	
+    # Call the anbasemap.py python script 
+    printf "%s UTC: Making ArcticNet basemap tiles at %s m resolution with region %s and product option(s) %s.\n\n" \
+	   $(date --utc +%Y%m%d-%H%M%S) $CELLSIZE $region $options | tee -a $LOG   
+    python $DIR_ROOT/anbasemap.py -D $DIR_SURFACES $DIR_ROOT/$HIGH_DATALIST -- $region $options $CELLSIZE
 
-    # Clean up (comment out for debugging)
-    rm $DIR_SURFACES/*.grd.cmd
-
-    printf "done at %s UTC.\n" $(date --utc +%Y%m%d-%H%M%S) | tee -a $LOG
+    # printf "done at %s UTC.\n" $(date --utc +%Y%m%d-%H%M%S) | tee -a $LOG
 }
 
 
@@ -226,20 +255,20 @@ grid-map() {
 #
 # GRID-ESRI(DATALIST) - Grid the mb59 files listed in the datalist and produce ESRI EHdr tile files in Lambert conformal conic projection
 #
-grid-esri() {
-    printf "\n\n\n" | tee -a $LOG
-    printf "###########################################################################################" | tee -a $LOG
-    printf "\n\n" | tee -a $LOG
-    printf "%s UTC: Making ESRI EHdr tile files at %s m resolution from the %s MB-System datalist.\n\n" $(date --utc +%Y%m%d-%H%M%S) $CELLSIZE $1 | tee -a $LOG
-    python $DIR_ROOT/anbasemap.py -D $DIR_SURFACES $1 $CELLSIZE 0
-    printf "done.\n" | tee -a $LOG
+# grid-esri() {
+#     printf "\n\n\n" | tee -a $LOG
+#     printf "###########################################################################################" | tee -a $LOG
+#     printf "\n\n" | tee -a $LOG
+#     printf "%s UTC: Making ESRI EHdr tile files at %s m resolution from the %s MB-System datalist.\n\n" $(date --utc +%Y%m%d-%H%M%S) $CELLSIZE $1 | tee -a $LOG
+#     python $DIR_ROOT/anbasemap.py -D $DIR_SURFACES $1 $CELLSIZE 0
+#     printf "done.\n" | tee -a $LOG
 
-    # Clean up (comment out for debugging)
-    rm $DIR_SURFACES/*.txt
-    rm $DIR_SURFACES/*.grd
-    rm $DIR_SURFACES/*.cmd
-    rm $DIR_SURFACES/*.flt.aux.xml
-}
+#     # Clean up (comment out for debugging)
+#     rm $DIR_SURFACES/*.txt
+#     rm $DIR_SURFACES/*.grd
+#     rm $DIR_SURFACES/*.cmd
+#     rm $DIR_SURFACES/*.flt.aux.xml
+#}
 
 
 
@@ -441,7 +470,7 @@ EOF
 fi
 
 # Parse the command line
-while getopts  ":ABCD:E:HM:P:T:U" opt
+while getopts  ":ABCD:HP:T:S:U" opt
 do
     case $opt in
 	A)
@@ -460,26 +489,22 @@ do
 	    echo "Create a DEM with color table $OPTARG" >&2
 	    dem $OPTARG;
 	    ;;
-	E)
-	    echo "Create ArcticNet Basemap tiles in ESRI Grid format from datalist $OPTARG" >&2
-	    grid-esri $OPTARG;
-	    ;;
 	H)
 	    # Display some help
 	    em302_process_help >&2
-	    ;;
-	M)
-	    echo "Create ArcticNet Basemap maps in .gif format from datalist $OPTARG" >&2
-	    grid_map $OPTARG;
 	    ;;
 	P)
 	    echo "Process .mb59 files from datalist $OPTARG" >&2
 	    process_mb59 $OPTARG;
 	    ;;
-	T)
+	S)
 	    echo "Create a shiptrack from the NMEA_Logger file $OPTARG" >&2
 	    shiptrack $OPTARG;
 	    ;;
+	T)
+	    # Create ArcticNet Basemap tiles with parameter $OPTARG
+	    make_tiles $OPTARG;
+	    ;;	
 	U)
 	    echo "Convert only new .all files since last conversion" >&2
 	    update_all;

@@ -15,33 +15,36 @@
 DIR_ROOT=$(pwd)
 
 # Path to the .all files to read
-DIR_DATA_ALL=$DIR_ROOT/all/Calibration
+DIR_DATA_ALL=$DIR_ROOT/
 
 # Path to where the .mb59 files should be written
-DIR_DATA_MB59=$DIR_ROOT/mb59/Calibration
+DIR_DATA_MB59=$DIR_ROOT/
 
 # Path to the .gsf files should be read
-DIR_DATA_GSF=$DIR_ROOT/gsf
+DIR_DATA_GSF=$DIR_ROOT/
 
 # Path to the shiptracks                         
-DIR_SHIPTRACK=$DIR_ROOT/shiptrack                  
+DIR_SHIPTRACK=$DIR_ROOT/
 
 # Path to where the Webtide file should be written
-DIR_WEBTIDE=$DIR_ROOT/tide	                   
+DIR_WEBTIDE=$DIR_ROOT/
 
 # Path to where the CARIS Tide files should be written
-DIR_HIPS_TIDE=$DIR_ROOT/tide                       
+DIR_HIPS_TIDE=$DIR_ROOT/
 
 # Path to where the MB-System files should be written
-DIR_MB_TIDE=$DIR_ROOT/tide                         
+DIR_MB_TIDE=$DIR_ROOT/
 
 # Path to where the grids should be written
-DIR_SURFACES=$DIR_ROOT/surfaces
+DIR_SURFACES=$DIR_ROOT/
 
 # Path the the NMEA_logger files
-NMEA=$DIR_ROOT/NMEA_logger
+NMEA=$DIR_ROOT/
 
 ###################### FILENAME LISTING ###############################
+
+# Name of the highest-level MB-System datalist
+HIGH_DATALIST=datalist.mb-1
 
 # Name of the log file
 LOG=log.txt
