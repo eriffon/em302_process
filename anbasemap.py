@@ -337,22 +337,22 @@ def main():
                     tile = bt.Basetile(tilename, region, args.cellsize)
 
                     print "Making a netCDF Grid for tile %s" % (tilename)
-                    tile.make_netcdf_grid(subdatalist, args.outdir)
-
-                    # Generate products according to selected creation options
-                    if 'e' in args.createopts:
-                        print "Making a ESRI Grid for tile %s" % (tilename)
-                        tile.make_esri_grid(args.outdir)
-                    if 'p' in args.createopts:
-                        print "Making a Postscript map for tile %s" % (tilename)
-                        tile.make_ps_map(args.outdir, args.logo)
-                    if 'g' in args.createopts:
-                        print "Making an image map for tile %s" % (tilename)
-                        tile.make_gif_map(args.outdir, args.logo)
-                else:
-                    print "Error: wrong creation options!\n"
+                    if (tile.make_netcdf_grid(subdatalist, args.outdir)):
+                        # Generate products according to selected creation options if netCDF grid is valid
+                        if 'e' in args.createopts:
+                            print "Making a ESRI Grid for tile %s" % (tilename)
+                            tile.make_esri_grid(args.outdir)
+                        if 'p' in args.createopts:
+                            print "Making a Postscript map for tile %s" % (tilename)
+                            tile.make_ps_map(args.outdir, args.logo)
+                        if 'g' in args.createopts:
+                            print "Making an image map for tile %s" % (tilename)
+                            tile.make_gif_map(args.outdir, args.logo)
+                        else:
+                            print "Error: wrong creation options!\n"
     else:
-        print "No data to grid for tilename %s!" % (tilename)
+#        print "No data to grid for tilename %s!\n" % (tilename)
+         print "No data to grid!\n"
 
     # Close the datalist file
     f_datalist.close()

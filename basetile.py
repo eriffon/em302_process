@@ -59,6 +59,8 @@ class Basetile(object):
 
         Keyword argument:
         region -- geographic extent of the tile
+        src_proj -- inverse projection
+        dst_proj -- forward projection
         """
         import pyproj
 
@@ -86,7 +88,7 @@ class Basetile(object):
     
     
     def __init__(self, name, region, cellsize):
-        """Create and initialize a new basetile object
+        """Creates and initialize a new basetile object
 
         Keyword arguments:
         name -- name of the basemap tile
@@ -191,8 +193,12 @@ class Basetile(object):
         Keyword arguments:
         datalist -- MB-System datalist
         outdir -- directory path in which to store the grid
+
+        Returns:
+        status -- True when the NetCDF grid has valid data. False otherwise.
         """
         outdir = self.__check_dir(outdir)
+        status = False
         
         if not(path.isfile(datalist)):
             print "\nError: no such file %s found.\n" % (datalist)
@@ -208,6 +214,7 @@ class Basetile(object):
             print "Gridding with %s m cell size..." % (self.cellsize)
             subprocess.call(["mbgrid", "-I", datalist, \
                              "-A2", "-F5", "-N", \
+                             "-C2/2", \
                              "-R"+self.region['geo'], \
                              "-JAmundsen", \
                              "-E"+str(self.cellsize)+"/0.0/meters!", \
@@ -240,7 +247,7 @@ class Basetile(object):
             remove(polyfile)
 
         if path.isfile(outdir+self.nc_grid):
-            # NetCDF grid
+            # original NetCDF grid
             remove(outdir+self.nc_grid)
             
         if path.isfile(outdir+self.nc_grid_mask):
@@ -251,10 +258,34 @@ class Basetile(object):
             # csh grid script
             remove(outdir+self.nc_cmd_script)
 
-            
+        # Check if the NetCDF grid contains valid data
+        try:
+            subprocess.check_call(['which', 'grdinfo'])
+        except subprocess.CalledProcessError:
+            print "\nCould not call grdinfo! Please make sure gmt is properly installed\n."
+            exit(-1)
+        else:
+            zrange = subprocess.check_output("grdinfo %s | grep 'z_min'"  % (outdir+self.nc_grid_tile), shell=True)
+            zmin = float(zrange.split(' ')[2])
+            zmax = float(zrange.split(' ')[4])
+            if not((zmax == 0) and (zmin == 0)):
+                # There is elevation data in the file. Set the return status to True
+                status = True
+            else:
+                # There is no elevation data in the file. Delete the NetCDF grid and mb-1 file
+                if path.isfile(outdir+self.nc_grid_tile):
+                    # tiled NetCDF grid
+                    remove(outdir+self.nc_grid_tile)
+
+                if path.isfile(outdir+self.nc_grid_datalist):
+                    # tiled NetCDF grid
+                    remove(outdir+self.nc_grid_datalist)
+
+        return status
+                
 
     def make_esri_grid(self, outdir):
-        """Make a NetCDF grid from the pre-generated NetCDF grid
+        """Make a ESRI grid from the pre-generated NetCDF grid
 
         Keyword arguments:
         outdir -- directory path in which to store the grid
@@ -274,6 +305,7 @@ class Basetile(object):
                 # Remove unnecessary files
                 if path.isfile(outdir+self.esri_grid_xml):
                     remove(outdir+self.esri_grid_xml)
+            
         else:
             print "\nError: NetCDF file %s not found!\n" % (self.nc_grid_tile)
             print "Run make_netcdf_grid() first.\n"
@@ -336,7 +368,7 @@ class Basetile(object):
         new_dict['Make legend']['VerticalDatum_header'] = "L 8 1 L @;128/128/128;Vertical Datum:@;;\n"
         new_dict['Make legend']['VerticalDatum'] = "L 8 1 L Mean Sea Level\n"
         new_dict['Make legend']['Gap4'] = "G -1.5c\n"
-        new_dict['Make legend']['Map scale'] = "M - 72 10+u f -J -R\n"
+        new_dict['Make legend']['Map scale'] = "M - 72 10+u f -J$MAP_PROJECTION2$MAP_SCALE2 -R$MAP_REGION2\n"
         new_dict['Make legend']['EOF'] = "EOF\n\n"
         
         new_dict['Make basemap'] = {}
