@@ -327,24 +327,14 @@ webtide2caris() {
     if [ ! -f $DIR_WEBTIDE/Track\ Elevation\ Prediction\ \(Time\ in\ GMT\).html ]; then
 	printf "\nWarning! File Track Elevation Prediction (Time in GMT).html not found! Have you copied the output from Webtide to the %s directory?\n" $DIR_WEBTIDE  | tee -a $LOG
 	exit 1
+    else	
+	printf "done.\n"
     fi
-    printf "done.\n"
-
-    # Rename the webtide track prediction file
-    cp $DIR_WEBTIDE/Track\ Elevation\ Prediction\ \(Time\ in\ GMT\).html $DIR_WEBTIDE/$WEBTIDE_NAME
 
     # Generate the CARIS HIPS & SIPS tide file
-    printf "Creating the CARIS HIPS & SIPS tide file..."
-    touch tempfile | echo "--------" > tempfile
-    TIMESTAMP=$(date --utc +%Y%m%d-%H%M%S).tid
-    tail -n+8 $DIR_WEBTIDE/$WEBTIDE_NAME | head -n-3 | sed '/<\/p><pre>/,/<\/pre>/ s/<\/p><pre>//g' | \
-	awk '{$1=$1}1' | cut -d' ' -f1,4-8 | awk 'BEGIN {FS = OFS = " " } {print $2, $3, $4, $5, $6, $1}' | \
-	awk '{cmd ="date \"+%Y/%m/%d\" -d \"$(date +%Y)-01-01 $(("$2" - 1))days\""; cmd | getline var; print var " " $3 ":" $4 ":" $5 " " $6; close(cmd)}' >> tempfile 
-    awk 'BEGIN { FS = "\n"; OFS = "\r\n" } { $1 = $1; print }' tempfile > $DIR_HIPS_TIDE/$HIPS_TIDE_PREFIX-$TIMESTAMP
-    rm tempfile
-    rm $DIR_WEBTIDE/$WEBTIDE_NAME
+    printf "Creating the CARIS HIPS & SIPS tide file...\n"
+    python tide_process.py webtide $DIR_WEBTIDE/Track\ Elevation\ Prediction\ \(Time\ in\ GMT\).html hips $DIR_HIPS_TIDE
     printf "done.\n" | tee -a $LOG
-    printf "The CARIS HIPS & SIPS file %s was created in the %s directory\n" $HIPS_TIDE_PREFIX-$TIMESTAMP $DIR_HIPS_TIDE | tee -a $LOG
 }
 
 
@@ -359,22 +349,20 @@ webtide2mb() {
     # Check that the track prediction file exists
     printf "Checking that the Webtide file has been generated..."
     if [ ! -f $DIR_WEBTIDE/Track\ Elevation\ Prediction\ \(Time\ in\ GMT\).html ]; then
-	printf "Warning! File Track Elevation Prediction (Time in GMT).html not found! Have you copied the output from Webtide to the %s directory?\n" $DIR_WEBTIDE  | tee -a $LOG
+	printf "\nWarning! File Track Elevation Prediction (Time in GMT).html not found! Have you copied the output from Webtide to the %s directory?\n" $DIR_WEBTIDE  | tee -a $LOG
 	exit 1
+    else	
+	printf "done.\n"
     fi
-    printf "done.\n"
 
-    # Rename the webtide track prediction file
-    cp $DIR_WEBTIDE/Track\ Elevation\ Prediction\ \(Time\ in\ GMT\).html $DIR_WEBTIDE/$WEBTIDE_NAME
-
-    # Generate the MB-system tide file
-    printf "Creating the MB-System tide file..."
-    TIMESTAMP=$(date --utc +%Y%m%d-%H%M%S).mbt
-    tail -n+8 $DIR_WEBTIDE/$WEBTIDE_NAME | head -n-3 | sed '/<\/p><pre>/,/<\/pre>/ s/<\/p><pre>//g' | \
-	awk '{$1=$1}1' | cut -d' ' -f1,4-8 | awk 'BEGIN {FS = OFS = " " } {print $2, $3, $4, $5, $6, $1}' >> $DIR_MB_TIDE/$MB_TIDE_PREFIX-$TIMESTAMP
-    rm $DIR_WEBTIDE/$WEBTIDE_NAME
-    printf "done.\n" | tee -a $LOG
-    printf "The MB-System tide file %s was created in the %s directory\n" $MB_TIDE_PREFIX-$TIMESTAMP $DIR_HIPS_TIDE | tee -a $LOG
+    # Generate the MB-System tide file
+    printf "Creating the MB-System tide file...\n"
+    python tide_process.py webtide $DIR_WEBTIDE/Track\ Elevation\ Prediction\ \(Time\ in\ GMT\).html mb $DIR_MB_TIDE
+    if [ $? -eq 0 ]; then
+	printf "All operations completed successfuly.\n" | tee -a $LOG
+    else
+	printf "Errors were reported. See log.\n" | tee -a $LOG
+    fi
 }
 
 
