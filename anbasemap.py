@@ -28,7 +28,7 @@ Create the ArcticNet 15' x 30' basemap tiles based on a given MB-System datalist
 import math as m
 import argparse
 from sys import exit, argv
-import os.path
+from os import path
 import subprocess
 import numpy as np
 import geospatial as geo
@@ -96,182 +96,6 @@ def proj_limits(region, path_tilename):
     
     
     
-def make_EHdr_grid(datalist, region, output_dir, tilename, cellsize):
-    """Make an ESRI EHdr Lambert conformal conic projected grid
-
-    Keyword arguments:
-    datalist -- MB-System datalist
-    region -- GMT region in the W/E/S/N format
-    output_dir -- directory path in which to store the map
-    tilename -- Name of the tile
-    """
-    # Grid
-    print "Gridding with %s m cell size..." % (cellsize)
-    subprocess.call(["mbgrid", "-I", datalist, "-A2", "-F5", "-N", "-R"+region, "-JAmundsen", "-E"+str(cellsize)+"/0.0/meters!", "-O", output_dir+"/"+tilename+"_Ztopo_lcc", "-V"])
-
-    # Get the projected limits
-    proj_limit_file = proj_limits(region, output_dir+"/"+tilename)
-    
-    # Mask based on projected coordinates
-    subprocess.call(["grdmask", proj_limit_file, "-G"+output_dir+"/"+tilename+"_Ztopo_lcc_mask.grd", "-R"+output_dir+"/"+tilename+"_Ztopo_lcc.grd", "-NNaN/1/1", "-V"])
-
-    # Perform mask
-    subprocess.call(["grdmath", output_dir+"/"+tilename+"_Ztopo_lcc.grd", output_dir+"/"+tilename+"_Ztopo_lcc_mask.grd", "OR", "=", output_dir+"/"+tilename+"_Ztopo_lcc_tiled.grd"])
-
-    # Change the output format
-    subprocess.call(["gdal_translate", "-a_srs", "+proj=lcc +lat_1=70 +lat_2=73 +lat_0=70 +lon_0=-105 +x_0=2000000 +y_0=2000000 +datum=WGS84 +units=m +no_defs", "-of", "EHdr", "-a_nodata", "-99999", output_dir+"/"+tilename+"_Ztopo_lcc_tiled.grd", output_dir+"/"+tilename+"_Ztopo_lcc_tiled.flt"])
-    
-
-    
-def make_gif_map(datalist, region, output_dir, tilename, logo, cellsize):
-    """Make a GIF file of the ArcticNet tile
-
-    Keyword arguments:
-    datalist -- MB-System datalist
-    region -- GMT region in the W/E/S/N format
-    output_dir -- directory path in which to store the map
-    tilename -- Name of the tile
-    logo -- Name of the logo to place in postscript map
-    """
-
-    # Check if the logo file exists
-    if not os.path.isfile(output_dir+"/"+logo):
-        print 'Could not find file %s. Please correct and try running the program again' % logo
-        exit()
-    else:
-        print '%s found in directory.' % logo
-    
-    # Grid
-    print "Gridding with %s m cell size..." % (cellsize)
-    gridname = output_dir+"/"+tilename+"_Ztopo"
-    print gridname
-    subprocess.call(["mbgrid", "-I", datalist, "-A2", "-F5", "-N", "-M", "-R"+region, "-E"+str(cellsize)+"/0.0/meters!", "-O", gridname, "-V"])
-
-    # Get the zmin and zmax of the grid
-    zrange = subprocess.check_output("grdinfo %s | grep 'z_min'"  % (gridname+".grd"), shell=True)
-    zmin = int(round_bounds(float(zrange.split(' ')[2]), base=1, direction='down'))
-    zmax = int(round_bounds(float(zrange.split(' ')[4]), base=1, direction='up'))
-    print zmin
-    print zmax
-
-    # Compute the color palette interval
-    numBars=5
-    interval = abs((zmax - zmin) / numBars)
-    
-    #  Write the GMT script and execute it
-    write_gmt_script(output_dir, tilename, tilename+'_Ztopo.grd', region, zmin, zmax, interval)
-    subprocess.call(["chmod", "u+x", output_dir+"/"+tilename+".sh"])
-    print "\n\n--------------\n\n"
-    print "Instructions:"
-    print "Execute <%s> to create the map in postscript and gif format." % (output_dir+"/"+tilename+".sh")
-    print "\n\n--------------\n\n"
-    #subprocess.call(["./"+tilename+".sh"])
-
-    
-    
-def write_gmt_script(output_dir, filename, Ztopo, region, zmin, zmax, interval):
-    """Write a GMT bash script for a basemap tile
-
-    Keyword arguments:
-    output_dir -- output directory to store the product
-    filename -- name of file to write
-    Ztopo -- name of the geographic bathymetric grid in NetCDF format
-    region -- geographic extent
-    zmin --
-    zmax --
-    interval -- number of color palette intervals
-    """
-    out = open(output_dir+"/"+filename+'.sh', 'w')
-    out.write('''#!/bin/bash
-
-PATH=$PATH:/usr/lib/gmt/bin
-################################################################################################################################
-## Title: {filename}.sh
-## Author: Jean-Guy Nistad
-## Projection: Lambert conic conformal
-## Descripion: This GMT script creates an ArctiNet Basemap Tile
-## Usage: ./{filename}.sh
-## Required UNIX programs: GMT version 4.5.6 or higher, Imagemagick
-## Required input arguments:
-##      1) The name of the basemap tile to create
-##      2) The netCDF grid of the geographic bathymetric grid to be displayed in the tile. The grid should have been generated
-##         a-priori using MB-System's mbgrid command.
-##      3) the logo to be displayed in the legend. The logo must have the name logos.sun and be present in the current directory
-################################################################################################################################
-
-# Set GMT variables
-gmtset PAPER_MEDIA=Letter
-gmtset DOTS_PR_INCH=300
-gmtset ANNOT_FONT_PRIMARY=Helvetica-Bold
-gmtset ANNOT_FONT_SIZE=0.5c
-gmtset X_ORIGIN=0c
-gmtset Y_ORIGIN=0c
-gmtset ELLIPSOID=WGS-84
-gmtset PAGE_ORIENTATION=portrait
-gmtset FRAME_WIDTH=1.25p
-gmtset BASEMAP_TYPE=plain
-
-# Required input variables
-tilename={filename}
-data={Ztopo}
-logos=logos.sun
-out={filename}.ps
-
-# Generated temporary variables
-data_i=Ztopo_cut_i.nc
-
-# Map variables
-width=15c
-proj=L-105/70/70/73/$width
-region={region}
-annot=0.5/0.25
-
-# Make a color palette
-makecpt -Cjet -T{zmin}/{zmax}/{interval} -V -Z > colorbar.cpt
-
-# Create a hillshade
-grdgradient $data -Ne0.5 -A270 -G$data_i
-
-# Griddding
-grdimage -E300 $data -J$proj -R$region -Xa3c -Ya8c -Ccolorbar.cpt -I$data_i -Q -V -K > $out
-
-# Background
-psbasemap -J$proj -R$region -B$annot -Xa3c -Ya8c --HEADER_FONT_SIZE=0.5c -V -K -O >> $out
-
-# Append the legend
-pslegend -J$proj -R$region -Dx0.25c/0.25c/21.1c/4c/BL -F -V -O << EOF >> $out
-G -1c
-B colorbar.cpt 4c 0.5c -A --ANNOT_FONT_PRIMARY=1 --ANNOT_FONT_SIZE=10 -S
-I logos.sun 4c RT
-G -2.6c
-L 8 1 L @;128/128/128;Title:@;;
-L 8 1 L Amundsen Basemap Tile $tilename
-G 0.1c
-L 8 1 L @;128/128/128;Datatype:@;;
-L 8 1 L Bathymetry gridded at 10m planimetric resolution
-G 0.1c
-L 8 1 L @;128/128/128;Projection:@;;
-L 8 1 L Lambert Conic Conformal
-G 0.1c
-L 8 1 L @;128/128/128;Horizontal Datum:@;;
-L 8 1 L WGS84(G1674)
-G 0.1c
-L 8 1 L @;128/128/128;Vertical Datum:@;;
-L 8 1 L Mean Sea Level
-G -1.5c
-M - 74 10+u f -J$proj -R$region
-EOF
-
-# Clean up
-rm colorbar.cpt
-rm $data_i
-
-convert -density 240 -flatten $out $tilename.gif
-'''.format(filename=filename, Ztopo=Ztopo, region=region, zmin=zmin, zmax=zmax, interval=interval))
-    out.close()
-
-    
-
 def main():
     LON_STEP = 0.5
     LAT_STEP = 0.25
@@ -309,10 +133,38 @@ def main():
     lat = np.linspace(ymax_tile, ymin_tile, num=ysteps, endpoint=False)
 
     # Create a new sub-datalist with filename composed with region extent
-    subdatalist = 'mbdatalist'+'_'+str(xmin_true)+'_'+str(xmax_true)+'_'+str(ymin_true)+'_'+str(ymax_true)+'.mb-1'
-    print "Running mbdatalist to generate datalist %s.\n"  % (subdatalist)
-    print "Please be patient. This may take some time...\n"
-    subprocess.check_output("mbdatalist -F-1 -I %s -R%s > %s" % (args.datalist, args.region, subdatalist), shell=True)
+    xmind, xminm, xmins, xminh = geo.decdeg2dms_hem(float(xmin_true), 'lon')
+    xmaxd, xmaxm, xmaxs, xmaxh = geo.decdeg2dms_hem(float(xmax_true), 'lon')
+    ymind, yminm, ymins, yminh = geo.decdeg2dms_hem(float(ymin_true), 'lat')
+    ymaxd, ymaxm, ymaxs, ymaxh = geo.decdeg2dms_hem(float(ymax_true), 'lat')
+
+    subdatalist = 'mbdatalist' +'_' + \
+                  str(xmind) + 'd' + str(xminm) + 'm' + xminh + '_to_' + \
+                  str(xmaxd) + 'd' + str(xmaxm) + 'm' + xmaxh + '_and_' + \
+                  str(ymind) + 'd' + str(yminm) + 'm' + yminh + '_to_' + \
+                  str(ymaxd) + 'd' + str(ymaxm) + 'm' + ymaxh + '.mb-1'
+
+    # Check if a datalist for the specified region already exists. If it does, let the user decide whether to use this datalist ('e') or recreate a new one ('c')
+    choice = 'c'     # Force the creation of the datalist. Only changed if the file exists and the use wishes to use the existing datalist.
+    if path.isfile(subdatalist):
+        print "\nThe datalist %s already exists! Would you like to use the existing datalist or create a new one?\n" % (subdatalist)
+        choices = set(['e', 'c'])
+        choice = raw_input('Enter your choice: use existing (\'e\') or create a new datalist (\'c\')?: ')
+        while not choices.intersection(choice):
+            choice = raw_input('Try again: use existing (\'e\') or create a new datalist (\'c\')?: ')
+
+    if (choice == 'c'):
+        try:
+            subprocess.check_call(['which', 'mbdatalist'])
+        except selfubprocess.CalledProcessError:
+            print "\nCould not call mbdatalist! Please make sure MB-Sysem is properly installed\n."
+            exit(-1)
+        else:
+            print "Running mbdatalist to generate datalist %s.\n"  % (subdatalist)
+            print "Please be patient. This may take some time...\n"
+            subprocess.check_output("mbdatalist -F-1 -I %s -R%s > %s" % (args.datalist, args.region, subdatalist), shell=True)
+    elif (choice == 'e'):
+        print "using existing datalist %s\n" % (subdatalist)   
 
     # Access the sub-datalist and check it's size
     f_datalist = open(subdatalist)

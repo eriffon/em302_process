@@ -4,7 +4,6 @@
 #
 # TITLE: geospatial.py
 # AUTHOR: Jean-Guy Nistad
-# DESCRIPTION: Library of common geospatial functions
 # 
 # Copyright (C) 2015  Jean-Guy Nistad
 #
@@ -22,6 +21,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ########################################################################################################
 
+"""
+Library of common geospatial functions
+"""
 
 def decdeg2dms(dd):
     """Convert from decimal degrees to degree minute seconds representation
@@ -52,7 +54,7 @@ def decdeg2dms_hem(dd, coord):
 
     Keyword arguments:
     dd -- decimal degrees
-    coord -- coordinate type (i.e. longitude or latitude)
+    coord -- coordinate type as string ('lat' | 'lon')
 
     Returns:
     a tuple containing (degrees, minutes, seconds, hemisphere)
