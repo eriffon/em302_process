@@ -99,6 +99,7 @@ class Basetile(object):
         PROJ4_GEO = "+proj=latlong +datum=WGS84"
         GMT_SCALE = "-105/70/70/73/"
         GMT_PROJ = "l"
+        PRIM_MERD = -105
         
         # Instance attributes
         self.name = name
@@ -108,6 +109,7 @@ class Basetile(object):
         self.proj4_proj_geo = PROJ4_GEO
         self.gmt_proj = GMT_PROJ
         self.gmt_scale = GMT_SCALE
+        self.prim_merd = PRIM_MERD
         self.nc_grid_no_ext = self.name+self.__suffix['grid']
         self.nc_grid = self.nc_grid_no_ext+self.__extension['grd']
         self.nc_grid_datalist = self.nc_grid_no_ext+self.__extension['mb-1']
@@ -402,8 +404,17 @@ class Basetile(object):
                 new_lines.insert(index + 4, new_dict['shell variable']['set MAP_PROJECTION2'])
 
                 # Compute the plot width of the original script
-                xmax = float(self.region['lr'][0])
-                xmin = float(self.region['ul'][0])
+                if (self.region['xmin'] >= self.prim_merd):
+                    # Tile is East of prime meridian
+                    xmax = float(self.region['lr'][0])
+                    xmin = float(self.region['ul'][0])
+                elif (self.region['xmax'] <= self.prim_merd):
+                    # Tile is West of prime meridian
+                    xmax = float(self.region['ur'][0])
+                    xmin = float(self.region['ll'][0])
+                else:
+                    print "\nError: Basetile %s is not well defined with respect to Prime Meridian.\n" % (self.name)
+                    exit(-1)
                 map_scale = float(old_dict['shell variable']['set MAP_SCALE'])
                 plot_width = map_scale * (xmax - xmin)
 
@@ -550,3 +561,5 @@ class Basetile(object):
         else:
             subprocess.call(["convert", "-density", "240", "-flatten", outdir+self.ps_map_lcc, outdir+self.gif_map_lcc])
             
+
+    

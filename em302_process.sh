@@ -247,28 +247,9 @@ make_tiles() {
 	   $(date --utc +%Y%m%d-%H%M%S) $CELLSIZE $region $options | tee -a $LOG   
     python $DIR_ROOT/anbasemap.py -D $DIR_SURFACES $DIR_ROOT/$HIGH_DATALIST -- $region $options $CELLSIZE
 
-    # printf "done at %s UTC.\n" $(date --utc +%Y%m%d-%H%M%S) | tee -a $LOG
+    printf "done with make_tiles() at %s UTC.\n" $(date --utc +%Y%m%d-%H%M%S) | tee -a $LOG
 }
 
-
-
-#
-# GRID-ESRI(DATALIST) - Grid the mb59 files listed in the datalist and produce ESRI EHdr tile files in Lambert conformal conic projection
-#
-# grid-esri() {
-#     printf "\n\n\n" | tee -a $LOG
-#     printf "###########################################################################################" | tee -a $LOG
-#     printf "\n\n" | tee -a $LOG
-#     printf "%s UTC: Making ESRI EHdr tile files at %s m resolution from the %s MB-System datalist.\n\n" $(date --utc +%Y%m%d-%H%M%S) $CELLSIZE $1 | tee -a $LOG
-#     python $DIR_ROOT/anbasemap.py -D $DIR_SURFACES $1 $CELLSIZE 0
-#     printf "done.\n" | tee -a $LOG
-
-#     # Clean up (comment out for debugging)
-#     rm $DIR_SURFACES/*.txt
-#     rm $DIR_SURFACES/*.grd
-#     rm $DIR_SURFACES/*.cmd
-#     rm $DIR_SURFACES/*.flt.aux.xml
-#}
 
 
 
