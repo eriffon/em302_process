@@ -2,7 +2,7 @@
 
 ### What is this repository for? ###
 
-Process Kongsberg EM302 multibeam bathymetry data collected by CCGS Amundsen
+This repository stores a series of bash and python scripts used to process bathymetry data collected by the Kongsberg Maritime EM302 multibeam echosounder installed on board the *Canadian Coast Guard Ship* (CCGS) Amundsen.
 
 ### How do I get set up? ###
 
@@ -19,7 +19,7 @@ Process Kongsberg EM302 multibeam bathymetry data collected by CCGS Amundsen
 * Code review
 * Other guidelines
 
-### Who do I talk to? ###
+### Contacts ###
 
-* Repo owner or admin
-* Other community or team contact
+* Jean-Guy Nistad (jean-guy.nistad@bsh.de)
+* Gabriel Joyal (gabriel.joyal.1@ulaval.ca)
