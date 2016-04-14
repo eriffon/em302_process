@@ -1,12 +1,8 @@
-# README #
-
-This README would normally document whatever steps are necessary to get your application up and running.
+# EM302_PROCESS #
 
 ### What is this repository for? ###
 
-* Process Kongsberg EM302 multibeam bathymetry data collected by CCGS Amundsen
-* Version
-* [Learn Markdown](https://bitbucket.org/tutorials/markdowndemo)
+Process Kongsberg EM302 multibeam bathymetry data collected by CCGS Amundsen
 
 ### How do I get set up? ###
 
