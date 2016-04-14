@@ -67,8 +67,8 @@ DATALISTP_MB59=datalistp_mb59.mb-1
 # Name of the .gsf MB-System datalist
 DATALIST_GSF=datalist_gsf.mb-1                     
 
-# Name of bash script for creation of the .esf files from the .gsf files produced in CARIS HIPS
-MAKE_ESF_SCRIPT=make_esf.sh
+# Name of bash script for merging of the edits from .gsf files produced in CARIS HIPS
+MERGE_GSF_SCRIPT=merge_gsf.sh
 
 # Prefix name for the shiptrack files
 SHIPTRACK_PREFIX=shiptrack 

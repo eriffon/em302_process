@@ -54,24 +54,26 @@ merge_edits() {
 	cat gsf_missing | awk '{print $1 ".gsf"}' | tee -a $LOG
     fi
 
-    # Create the make esf script
-    printf "Creating the script to make .esf files..." | tee -a $LOG
-    touch $MAKE_ESF_SCRIPT | printf "#!/bin/bash\n\n" > $MAKE_ESF_SCRIPT
+    # Create the merge gsf script
+    printf "Creating the mbcopy script file..." | tee -a $LOG
+    touch $MERGE_GSF_SCRIPT | printf "#!/bin/bash\n\n" > $MERGE_GSF_SCRIPT
     cat mb59_gsf_common | awk -v dir_mb59=$DIR_DATA_MB59 -v dir_gsf=$DIR_DATA_GSF \
-                              '{print "mbgetesf -F121 -I " dir_gsf "/" $1 ".gsf -O " dir_mb59 "/" $1 ".mb59.esf"}' >> $MAKE_ESF_SCRIPT
+                              '{print "mbcopy -F59/59/121 -I " dir_mb59 "/" $1 ".mb59 -M " dir_gsf "/" $1 ".gsf -O " dir_mb59 "/" $1 "f.mb59\n" \
+                                      "rm " dir_mb59 "/" $1 ".mb59\n" \
+                                      "mv " dir_mb59 "/" $1 "f.mb59 " dir_mb59 "/" $1 ".mb59"}' >> $MERGE_GSF_SCRIPT
     printf "done.\n" | tee -a $LOG
 
-    # run the make esf script
-    printf "Running the script to make esf files..." | tee -a $LOG
-    chmod +x $MAKE_ESF_SCRIPT
-    source $MAKE_ESF_SCRIPT
+    # run the merge gsf script
+    printf "Running the mbcopy script file..." | tee -a $LOG
+    chmod +x $MERGE_GSF_SCRIPT
+    source $MERGE_GSF_SCRIPT
     printf "done.\n" | tee -a $LOG
 
     # Clean up the temporary listings
     rm mb59_filenames gsf_filenames gsf_missing mb59_gsf_common
 
-    # Remove the make esf script
-    rm $MAKE_ESF_SCRIPT
+    # Remove the merge gsf script
+    #rm $MERGE_GSF_SCRIPT
 }
 
 
