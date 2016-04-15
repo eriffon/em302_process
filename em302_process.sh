@@ -73,7 +73,7 @@ merge_edits() {
     rm mb59_filenames gsf_filenames gsf_missing mb59_gsf_common
 
     # Remove the merge gsf script
-    #rm $MERGE_GSF_SCRIPT
+    rm $MERGE_GSF_SCRIPT
 }
 
 
