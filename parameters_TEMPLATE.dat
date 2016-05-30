@@ -46,9 +46,6 @@ NMEA=$DIR_ROOT/
 # Name of the highest-level MB-System datalist
 HIGH_DATALIST=datalist.mb-1
 
-# Name of the log file
-LOG=log.txt
-
 # Name of the .all MB-System datalist
 DATALIST_ALL=datalist_all.mb-1                     
 
@@ -67,8 +64,9 @@ DATALISTP_MB59=datalistp_mb59.mb-1
 # Name of the .gsf MB-System datalist
 DATALIST_GSF=datalist_gsf.mb-1                     
 
-# Name of bash script for merging of the edits from .gsf files produced in CARIS HIPS
+# Name of bash scripts which call mbcopy -M
 MERGE_GSF_SCRIPT=merge_gsf.sh
+MAKE_ESF_SCRIPT=make_esf.sh
 
 # Prefix name for the shiptrack files
 SHIPTRACK_PREFIX=shiptrack 
@@ -87,9 +85,6 @@ PROJECTION=Amundsen
 
 # Basename of the MB-System grid to create
 GRID=calibration
-
-# Name of the projection file (will be created if not in the current directory)
-PROJ_WKT=omg.wkt
 
 ###################### OPTION LISTING ###############################
 
