@@ -138,7 +138,7 @@ convert_all() {
     fi
 
     # All done!
-    printf "All done.\n"
+    printf "Done with converting Simrad all files.\n"
 }
 
 
@@ -214,12 +214,12 @@ process_mb59() {
     # Apply the tide
     # TO BE COMPLETED
     
-    # Process the mb59 files and create processed .mb59 files
-    [ $_VERBOSE -eq 1 ] && printf "Creating processed .mb59 files...\n"
+    # Process the mb59 files and create processed mb59 files
+    [ $_VERBOSE -eq 1 ] && printf "Creating processed mb59 files...\n"
     mbprocess -I $DIR_DATA_MB59/$DATALIST_MB59
    
     # Create the mb59 datalist of processed mb59 files
-    [ $_VERBOSE -eq 1 ] && printf "Creating the processed .mb59 datalist...\n"
+    [ $_VERBOSE -eq 1 ] && printf "Creating the processed mb59 datalist...\n"
     printf "\$PROCESSED\n%s\n" $DATALIST_MB59 > $DIR_DATA_MB59/$DATALISTP_MB59
 
     # Cleanup
@@ -242,14 +242,14 @@ em302_process_help() {
 
     cat << EOF
 Program em302_process
-Version 1.0
+Version 2.0
 
 em302_process is a high-level bash shell script used to process EM302 multibeam bathymetry data
 collected by the Canadian ice-breaker CCGS Amundsen. em302_process is a front-end to MB-System.
 When run, em302_process will create processed mb59 files containing both bathymetry and backscatter
 data. The bathymetry data can be merged from an external gsf file produced by a third-party software.
 
-Usage: ${0##*/} [-C -D -H -M${bU}mode${eU} -P -U -V]
+Usage: ./${0##*/} [-C -D -H -M${bU}mode${eU} -P -U -V]
 
      -C          Convert all Simrad all files
      -D          Print the content of the parameters file
@@ -282,6 +282,13 @@ print_parameters() {
 # MAIN STARTS HERE #
 ####################
 
+# Check if MB-System is properly installed
+mbstatus=$(which mbinfo)
+if [ -z $mbstatus ]; then
+    printf "Could not call mbinfo! Please make sure MB-Sysem is properly installed\n"
+    exit 1
+fi
+
 # Set the project Metadata
 if [ ! -f parameters.dat ]; then
     printf "Warning! No parameter file found. Make sure that the parameters.dat file exists in the current execution directory.\n"
@@ -289,11 +296,6 @@ if [ ! -f parameters.dat ]; then
 fi
 chmod +x parameters.dat
 source parameters.dat
-
-# Check if log file exists. Create it if first run
-if [ ! -f $LOG ]; then
-    touch $LOG
-fi
 
 # Default arguments
 merge_arg=0
@@ -348,15 +350,20 @@ do
   
 done #getopts
 
-if [ $convert_all_flag -eq 1 ]; then
-    convert_all $merge_arg
-elif [ $update_flag -eq 1 ]; then
-    #printf "I just want to update the unconverted Simrad all files with option M=$merge_arg\n"
-    update_all $merge_arg
+if [ $# -eq 0 ]; then
+    # No option was passed: just display a useful message
+    printf "To display the help, type %s -H\n" $0
+else
+    if [ $convert_all_flag -eq 1 ]; then
+	# Convert all Simrad all files
+	convert_all $merge_arg
+    elif [ $update_flag -eq 1 ]; then
+	# Update the unconverted Simrad all files with option M=$merge_arg
+	update_all $merge_arg
+    fi
+    
+    if [ $process_mb59_flag -eq 1 ]; then
+	# Process all modified mb59 files
+	process_mb59
+    fi    
 fi
-
-if [ $process_mb59_flag -eq 1 ];then
-    # printf "I will process all modified mb59 files\n"
-    process_mb59
-fi
-

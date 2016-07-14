@@ -2,77 +2,75 @@
 # Kongsberg EM302 Sonar Processing Parameter file
 #
 # Created by Jean-Guy Nistad
-# Created on 2014-08-06
+# Created on 2016-07-14
 #
-# This file is the parameter file for the script file em302_process.sh
+# This file is the parameter file for the script files em302_process.sh,
+# basetile_process.sh, tide_process.sh and gnss_process.sh
 #
 ########################################################################
 
-
-###################### DIRECTORY LISTING ###############################
+############################# GENERAL ##################################
 
 # Current directory (normally, you should not have to edit this)
 DIR_ROOT=$(pwd)
 
-# Path to the .all files to read
-DIR_DATA_ALL=$DIR_ROOT/
+######################## EM302_PROCESS.SH ##############################
 
-# Path to where the .mb59 files should be written
-DIR_DATA_MB59=$DIR_ROOT/
+# Path to the Simrad all files to read
+DIR_DATA_ALL=$DIR_ROOT/[REPLACE WITH PATH]
 
-# Path to the .gsf files should be read
-DIR_DATA_GSF=$DIR_ROOT/
+# Name of the Simrad all files MB-System datalist
+DATALIST_ALL=datalist_all.mb-1         
 
-# Path to the shiptracks                         
-DIR_SHIPTRACK=$DIR_ROOT/
-
-# Path to where the Webtide file should be written
-DIR_WEBTIDE=$DIR_ROOT/
-
-# Path to where the CARIS Tide files should be written
-DIR_HIPS_TIDE=$DIR_ROOT/
-
-# Path to where the MB-System files should be written
-DIR_MB_TIDE=$DIR_ROOT/
-
-# Path to where the grids should be written
-DIR_SURFACES=$DIR_ROOT/
-
-# Path the the NMEA_logger files
-NMEA=$DIR_ROOT/
-
-###################### FILENAME LISTING ###############################
-
-# Name of the highest-level MB-System datalist
-HIGH_DATALIST=datalist.mb-1
-
-# Name of the .all MB-System datalist
-DATALIST_ALL=datalist_all.mb-1                     
-
-# NAME of the update .all MB-System datalist
+# Name of the update Simrad all MB-System datalist
 DATALIST_UPDATE_ALL=datalist_update_all.mb-1
 
-# Name of the .mb59 MB-System datalist
+# Path to where the MB-System mb59 files should be written
+DIR_DATA_MB59=$DIR_ROOT/[REPLACE WITH PATH]
+
+# Name of the MB-System mb59 MB-System datalist
 DATALIST_MB59=datalist_mb59.mb-1
 
-# NAME of the update .mb59 MB-System datalist
+# Name of the update MB-System mb59 MB-System datalist
 DATALIST_UPDATE_MB59=datalist_update_mb59.mb-1
 
-# Name of the processed .mb59 MB-System datalist
+# Name of the processed MB-System mb59 MB-System datalist
 DATALISTP_MB59=datalistp_mb59.mb-1
 
-# Name of the .gsf MB-System datalist
-DATALIST_GSF=datalist_gsf.mb-1                     
+# Path to the gsf files to read
+DIR_DATA_GSF=$DIR_ROOT/[REPLACE WITH PATH]
 
-# Name of bash scripts which call mbcopy -M
+# Name of the gsf MB-System datalist
+DATALIST_GSF=datalist_gsf.mb-1
+
+# Name of bash scripts which calls mbcopy -M
 MERGE_GSF_SCRIPT=merge_gsf.sh
 MAKE_ESF_SCRIPT=make_esf.sh
 
-# Prefix name for the shiptrack files
-SHIPTRACK_PREFIX=shiptrack 
+####################### BASETILE_PROCESS.SH ############################
+
+# Path to where the grids should be written
+DIR_SURFACES=$DIR_ROOT/[REPLACE WITH PATH]
+
+# Name of the Mb-System projection to use (don't edit this! It links to the MB-System Projections.dat file)
+PROJECTION=Amundsen
+
+# Cell size of the MB-System grid
+CELLSIZE=10
+
+########################## TIDE_PROCESS.SH #############################
+
+# Path to where the Webtide file should be written
+DIR_WEBTIDE=$DIR_ROOT/[REPLACE WITH PATH]
+
+# Path to where the CARIS Tide files should be written
+DIR_HIPS_TIDE=$DIR_ROOT/[REPLACE WITH PATH]
 
 # Prefix name for the CARIS tide files                       
 HIPS_TIDE_PREFIX=hips_tide
+
+# Path to where the MB-System files should be written
+DIR_MB_TIDE=$DIR_ROOT/[REPLACE WITH PATH]
 
 # Prefix name for the MB-System tide files                      
 MB_TIDE_PREFIX=mb_tide                             
@@ -80,14 +78,13 @@ MB_TIDE_PREFIX=mb_tide
 # Name of the temporary Webtide file (normally, you should not have to edit this)
 WEBTIDE_NAME=Track_Elevation_Prediction_Time_in_GMT.html
 
-# Name of the Mb-System projection to use (don't edit this! It links to the MB-System Projections.dat file)
-PROJECTION=Amundsen
+########################## GNSS_PROCESS.SH #############################
 
-# Basename of the MB-System grid to create
-GRID=calibration
+# Path the the NMEA_logger files
+NMEA=$DIR_ROOT/[REPLACE WITH PATH]
 
-###################### OPTION LISTING ###############################
+# Path to the shiptracks                         
+DIR_SHIPTRACK=$DIR_ROOT/[REPLACE WITH PATH]
 
-# Cell size of the MB-System grid
-CELLSIZE=10
-
+# Prefix name for the shiptrack files
+SHIPTRACK_PREFIX=shiptrack

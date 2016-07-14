@@ -6,13 +6,13 @@
 \fBem302_process\fP \- Process Kongsberg EM302 multibeam bathymetry data collected by CCGS Amundsen
 
 .SH VERSION
-Version 1.0
+Version 2.0
 
 .SH SYNOPSIS
 \fBem302_process\fP [\fB-C\fP \fB-D\fP \fB-H\fP \fB-M\fP\fImode\fP \fB-P \fB-U\fP \fB-V\fP]
 
 .SH DESCRIPTION
-em302_process is a high-level bash shell script used to process EM302 multibeam bathymetry data collected by the Canadian ice-breaker CCGS Amundsen. em302_process is a front-end program to \fBMB-System\fP and therefore requires that \fBMB-System\fP first be properly installed. When run, em302_process will create processed mb59 files containing both bathymetry and backscatter data. The bathymetry data can be merged from an external gsf file produced by a third-party software. The user can chose whether to merge solely the bathymetry edits or the bathymetry edits together with the actual sounding locations in the Ship-based coordinate system (along-track, across-track and depth). With the latter option, the processed mb59 files will incorporate any processing (e.g. new sound velocity applied, tide applied) performed in the third-party software and contained in the gsf files. The backscatter data remains untouched.
+em302_process is a high-level bash shell script used to process EM302 multibeam bathymetry data collected by the Canadian ice-breaker CCGS Amundsen. em302_process is a front-end program to \fBMB-System\fP and therefore requires that \fBMB-System\fP first be properly installed. When run, em302_process will convert Simrad all files into processed mb59 files containing both bathymetry and backscatter data. The bathymetry data can optionally be merged with an external gsf file produced by a third-party software in order to transfer editing and processing results obtained from this third-party software. The user can chose one of two options: 1) Merge solely the bathymetry edits; 2) Merge the bathymetry edits together with the actual sounding locations in the Ship-based coordinate system (along-track, across-track and depth). With the latter option, the processed mb59 files will incorporate any processing (e.g. sound velocity applied, tide applied) performed in the third-party software and contained in the gsf files. The backscatter data remains untouched.
 
 em302_process works in unison with a parameters file called \fIparameters.dat\fP. This file must reside at the same level as the em302_process bash script. The \fIparameters.dat\fP file provides file location and file naming conventions in order to run em302_process. Make sure to fully read the content of the \fIparameters.dat\fP file before executing em302_process.
 
@@ -34,7 +34,7 @@ Patrick Lajeunesse (patrick.lajeunesse@ggr.ulaval.ca)
 .SH OPTIONS
 .TP
 .B \-C
-Converts all Simrad all files contained in the directory pointed to by the variable $DIR_DATA_ALL (see \fIparameters.dat\fP file) into mb59 files and stores them into the directory pointed to by the variable $DIR_DATA_MB59 (see \fIparameters.dat\fP file).
+Converts all Simrad all files contained in the directory pointed to by the variable $DIR_DATA_ALL (see \fIparameters.dat\fP file) into raw mb59 files and stores them into the directory pointed to by the variable $DIR_DATA_MB59 (see \fIparameters.dat\fP file).
 
 .TP
 .B \-D
@@ -48,17 +48,17 @@ This "help" flag cause the program to print out a description of its operation a
 .B \-M
 \fImode\fP
 .br
-When run with the \fB-M\fP (merge mode) option, the program will try to find, for each all file, a corresponding gsf file with the same name in the directory pointed to by the variable $DIR_DATA_GSF (see \fIparameters.dat\fP file). If it does not find the corresponding gsf file, it will report the problematic all files to standard output. With \fImode\fP = 0 (the default), the gsf files are ignored and the bathymetry is solely read from the all files. With \fImode\fP = 1, the bathymetry edits and the sounding locations in the Ship-based coordinate system will be extracted from the gsf files. This option should be used when the actual bathymetry processing (e.g. ray-tracing, tide application) was previously perfomed by the third-party software from which the gsf file was created and no further processing is required in \fBMB-System\fP. With \fImode\fP = 1, only the bathymetry edits will be extracted from the gsf files. This option should be used when further bathymetry processing is required in \fBMB-System\fP.
+When run with the \fB-M\fP (merge mode) option, the program will try to find, for each Simrad all file, a corresponding gsf file with the same name in the directory pointed to by the variable $DIR_DATA_GSF (see \fIparameters.dat\fP file). If it does not find the corresponding gsf file, it will report the problematic Simrad all files to standard output. With \fImode\fP = 0 (the default), the gsf files are ignored and the bathymetry is solely read from the Simrad all files. With \fImode\fP = 1, the bathymetry edits and the sounding locations in the Ship-based coordinate system will be extracted from the gsf files. This option should be used when the actual bathymetry processing (e.g. ray-tracing, tide application) was previously performed by the third-party software from which the gsf file was created and when no further processing is required in \fBMB-System\fP. With \fImode\fP = 2, only the bathymetry edits will be extracted from the gsf files. This option should be used when further bathymetry processing is required in \fBMB-System\fP.
 
 .TP
 .B \-P
 .br
-This option is used to process the mb59 \fBMB-System\fP data files contained in the directory pointed to by the variable $DIR_DATA_MB59 (see \fIparameters.dat\fP file) to produce processed mb59 \fBMB-System\fP data files. The processed mb59 files will only be generated if they have not yet been created or if a changed occured to the (un-processed) mb59 files. This option can be used in confunction with the \fB-C\fP or the \fB-U\fP option, in which case the conversion of Simrad all files will be followed by the processing of the newly created mb59 files.
+This option is used to process the raw mb59 data files contained in the directory pointed to by the variable $DIR_DATA_MB59 (see \fIparameters.dat\fP file) to produce processed mb59 data files. The processed mb59 files will only be generated if they have not yet been created or if a changed occurred to the (unprocessed) mb59 files. This option can be used in conjunction with the \fB-C\fP or the \fB-U\fP option, in which case the conversion of Simrad all files will be followed by the processing of the newly created mb59 files.
 
 .TP
 .B \-U
 .br
-Converts the Simrad all files contained in the directory pointed to by the variable $DIR_DATA_ALL (see \fIparameters.dat\fP file) into mb59 files and stores them into the directory pointed to by the variable $DIR_DATA_MB59 (see \fIparameters.dat\fP file). Only files found in the $DIR_DATA_ALL directory that have not yet been converted to mb59 will be converted. Hence, the \fB-U\fP option is akin to an update to convert all new Simrad all files present in the $DIR_DATA_ALL directory.
+Converts the Simrad all files contained in the directory pointed to by the variable $DIR_DATA_ALL (see \fIparameters.dat\fP file) into mb59 files and stores them into the directory pointed to by the variable $DIR_DATA_MB59 (see \fIparameters.dat\fP file). Only Simrad all files found in the $DIR_DATA_ALL directory that have not yet been converted to raw mb59 files will be converted. Hence, the \fB-U\fP option is akin to an update to convert all new Simrad all files present in the $DIR_DATA_ALL directory.
 
 .TP
 .B \-V

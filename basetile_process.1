@@ -1,0 +1,150 @@
+.\" Manpage for basetile_process
+.\" Contact jgnistad@gmail.com to correct errors or typos.
+.TH basetile_process 1 "20 April 2016" "1.0" "basetile_process man page"
+
+.SH NAME
+\fBbasetile_process\fP \- Create ArcticNet bathymetry and backscatter basetiles from multibeam data stored in \fBMB-System\fP format.
+
+.SH VERSION
+Version 2.0
+
+.SH SYNOPSIS
+\fBbasetile_process\fP \fB-I\fIdatalist\fP [\fB-A\fIdatatype\fP \fB-D\fP \fB-G\fIgridkind\fP \fB-H\fP \fB-M\fImapkind\fP \fB-R\fIwest\fP/\fIeast\fP/\fIsouth\fP/\fInorth\fP[\fBr\fP] \fB-V\fP]
+
+.SH DESCRIPTION
+basetile_process is a high-level bash script used to create bathymetry and backscatter \fBArcticNet Basetiles\fP from multibeam data collected in the Canadian Arctic. basetile_process is a front-end program to \fBMB-System\fP and therefore requires that \fBMB-System\fP first be properly installed. When run, basetile_process will creates \fBArcticNet Basetiles\fP of 15' latitude x 30' longitude in a custom Lambert conformal conic projection (see \fBARCTICNET PROJECTION DETAILS\fP below) from the specified \fIdatalist\fP. The script will first either use the Region of interest specified by the \fB-R\fP option or, when the \fB-R\fP option is not used, it will compute the Region of interest based on the geographic bounds of the specified \fIdatalist\fP. It will then expand the Region of interest to an integer multiple of 15' latitude and an integer multiple of 30' longitude.
+
+basetile_process works in unison with a parameters file called \fIparameters.dat\fP. This file must reside at the same level as the basetile_process bash script. The \fIparameters.dat\fP file provides file location and file naming conventions in order to run basetile_process. Make sure to fully read the content of the \fIparameters.dat\fP file before executing basetile_process.
+
+.SH AUTHORSHIP
+Jean-Guy Nistad (jgnistad@gmail.com)
+.br
+  Bundesamt für Seeschifffahrt und Hydrographie (Germany)
+.br
+Gabriel Joyal (gabriel.joyal.1@ulaval.ca)
+.br
+  Laval University (Canada)
+.br
+Patrick Lajeunesse (patrick.lajeunesse@ggr.ulaval.ca)
+.br
+  Laval University (Canada)
+
+.SH OPTIONS
+.TP
+.B \-A
+\fIdatatype\fP
+.br
+Sets the type of data to be read and gridded. If \fIdatatype\fP = 1, bathymetry data will be gridded (positive downwards). If datatype = 2, bathymetry data will be gridded as topography (positive upwards). If \fIdatatype\fP = 3, amplitude data will be gridded.  If \fIdatatype\fP = 4, sidescan data will be gridded. Default: datatype = 2 (topography).
+
+.TP
+.B \-D
+Prints the content of the \fIparameters.dat\fP file to standard output.
+
+.TP
+.B \-G
+\fIgridkind\fP
+.br
+This option sets the format of the output grid file. The default is to output a GMT NetCDF 4-byte float grid.
+
+The simple grid format identifiers are:
+ 	\fIgridkind\fP = 1:	GMT netCDF 4-byte float format [Default]
+ 	\fIgridkind\fP = 2:	GMT netCDF 4-byte float & ESRI Grid Raster formats
+
+The above listed formats will produce specific output files. The following section lists the relevant files produced for each output format.
+
+\fBGMT netCDF 4-byte float format\fP
+    - a .grd binary file,
+    - a .mb-1 ASCII file containing the filenames of the survey lines that are part of the grid.
+
+\fBESRI Grid Raster format\fP
+    - a .flt binary file,
+    - a .hdr ASCII header file,
+    - a .prj ASCII header file containing the projection as WKT,
+    - a .mb-1 ASCII file containing the filenames of the survey lines that are part of the grid.
+
+.TP
+.B \-H
+This "help" flag cause the program to print out a description of its operation and then exit immediately.
+
+.TP
+.B \-I
+\fIdatalist\fP
+.br
+Sets the filename of the file containing a list of the input swath sonar data files and their formats.
+
+.TP
+.B \-M
+\fImapkind\fP
+.br
+This option sets the format of the output map file. The default is to output a Postscript file.
+
+The simple map format identifiers are:
+ 	\fImapkind\fP = 1:	Postscript format [Default]
+ 	\fImapkind\fP = 2:	Postscript & gif image formats
+
+The above listed formats will produce specific output files. The following section lists the relevant files produced for each output format.
+
+\fBPostscript\fP
+    - a .ps Postscript file,
+    - a .cmd GMT c-shell script that generates the Postscript file,
+    - a .mb-1 ASCII file containing the filenames of the survey lines that are part of the map.
+
+\fBImage\fP
+    - a .gif image file,
+    - a .mb-1 ASCII file containing the filenames of the survey lines that are part of the map.
+
+.TP
+.B \-R
+\fIwest/east/south/north\fP
+.br
+\fIwest, east, south,\fP and \fInorth\fP specify the Region of interest.  To specify boundaries
+in degrees and minutes [and seconds], use the dd:mm[:ss] format.  Append \fBr\fP if lower left and upper right
+map coordinates are given instead of wesn.
+
+.TP
+.B \-V
+.br
+Causes \fBbasetile_process\fP to operate in "verbose" mode so that it outputs more information than usual.
+
+.SH
+ARCTICNET PROJECTION DETAILS
+The ArcticNet Amundsen projection is a Lambert conic conformal projection with 2 standard parallels. It's general description is:
+
+    - Projection: Lambert Conic Conformal
+    - Datum: WGS84
+    - Latitude of origin: 70 degrees North
+    - First standard parallel: 70 degrees North
+    - Second standard parallel: 73 degrees North
+    - Longitude of origin: 105 degrees West
+    - False Easting: 2,000,000
+    - False Northing: 2,000,000
+
+It's PROJ.4 definition is:
+
++proj=lcc +lat_0=70 +lat_1=70 +lat_2=73 +lon_0=-105 +x_0=2000000 +y_0=2000000 +datum=WGS84 +units=m +no_defs <>
+
+It's OGC WKT definition is:
+
+PROJCS["Amundsen Expeditions",
+    GEOGCS["WGS 84",
+        DATUM["WGS_1984",
+            SPHEROID["WGS 84",6378137,298.257223563,
+                AUTHORITY["EPSG","7030"]],
+            AUTHORITY["EPSG","6326"]],
+        PRIMEM["Greenwich",0],
+        UNIT["degree",0.0174532925199433],
+        AUTHORITY["EPSG","4326"]],
+    PROJECTION["Lambert_Conformal_Conic_2SP"],
+    PARAMETER["standard_parallel_1",70],
+    PARAMETER["standard_parallel_2",73],
+    PARAMETER["latitude_of_origin",70],
+    PARAMETER["central_meridian",-105],
+    PARAMETER["false_easting",2000000],
+    PARAMETER["false_northing",2000000],
+    UNIT["metre",1,
+        AUTHORITY["EPSG","9001"]]]
+.SH BUGS
+On pourrait charger le même prix d'entrée qu'à l'Insectarium de Montréal.
+
+.SH AUTHOR
+Jean-Guy Nistad (jgnistad@gmail.com)

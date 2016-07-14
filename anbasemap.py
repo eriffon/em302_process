@@ -32,7 +32,9 @@ from os import path
 import subprocess
 import numpy as np
 import geospatial as geo
-import basetile as bt
+import basetile_bathy as btbathy
+import basetile_amp as btamp
+import basetile_ss as btss
 
     
 def round_bounds(x, base=0.5, direction='up'):
@@ -103,8 +105,10 @@ def main():
     parser = argparse.ArgumentParser(description= \
                                      "Create the ArcticNet 15' x 30' basemap tiles based on a given MB-System datalist, region and spatial resolution")
     parser.add_argument('datalist', type=str, help='MB-System datalist')
-    parser.add_argument('region', type=str, help='region in west/east/south/north format')
-    parser.add_argument('createopts', type=str, help='creation options as esri grid (e), postscript (p), image (g)')
+    parser.add_argument('datatype', type=int, default='2', help='MB-System datatype (bathymetry = 1; amplitude = 2; sidescan = 3')
+    parser.add_argument('gridkind', type=int, default='1', help='MB-System gridkind (netCDF = 1; ESRI Grid = 2')
+    parser.add_argument('mapkind',  type=int, default='1', help='MB-System mapkind (Postscript = 1; gif = 2')
+    parser.add_argument('region',   type=str, help='region in west/east/south/north format')
     parser.add_argument('cellsize', type=float, help='cellsize')
     parser.add_argument('-D', '--outdir', help='output directory in which to store the products')
     parser.add_argument('-l', '--logo', default='logos.sun', help='logo to display in legend. Default: logos.sun')
@@ -184,24 +188,55 @@ def main():
 
                 # Region of the tile
                 region = "%.1f/%.1f/%.2f/%.2f" % (x, x+LON_STEP, y-LAT_STEP, y)
-          
-                if ('e' in args.createopts) or ('p' in args.createopts) or ('g' in args.createopts):                   
-                    tile = bt.Basetile(tilename, region, args.cellsize)
+               
+                if (args.datatype == 1 or args.datatype == 2):
+                    # Instantiate a bathy grid
+                    tile = btbathy.BasetileBathy(tilename, region, args.cellsize)
 
-                    print "Making a netCDF Grid for tile %s" % (tilename)
-                    if (tile.make_netcdf_grid(subdatalist, args.outdir)):
-                        # Generate products according to selected creation options if netCDF grid is valid
-                        if 'e' in args.createopts:
-                            print "Making a ESRI Grid for tile %s" % (tilename)
-                            tile.make_esri_grid(args.outdir)
-                        if 'p' in args.createopts:
-                            print "Making a Postscript map for tile %s" % (tilename)
-                            tile.make_ps_map(args.outdir, args.logo)
-                        if 'g' in args.createopts:
-                            print "Making an image map for tile %s" % (tilename)
-                            tile.make_gif_map(args.outdir, args.logo)
-                        else:
-                            print "Error: wrong creation options!\n"
+                    # Make a bathy NetCDF grid
+                    tile.make_bathy_grid(subdatalist, args.outdir)
+                    # Make optional grid
+                    if (args.gridkind == 2):
+                        tile.make_esri_grid(args.outdir)
+
+                    # Make the Postscript map
+                    tile.make_bathy_ps_plot(args.outdir, args.logo)
+                    # Make option gif image
+                    if (args.mapkind == 2):
+                        tile.make_gif_plot(args.outdir, args.logo)
+                            
+                elif (args.datatype == 3):
+                    # Instantiate an amplitude grid
+                    tile = btamp.BasetileAmp(tilename, region, args.cellsize)
+
+                    # Make an amplitude NetCDF grid
+                    tile.make_amp_grid(subdatalist, args.outdir)
+                    # Make optional grid
+                    if (args.gridkind == 2):
+                        tile.make_esri_grid(args.outdir)
+
+                    # Make an amplitude Postscript map
+                    tile.make_amp_ps_plot(args.outdir, args.logo)
+                    # Make option gif image
+                    if (args.mapkind == 2):
+                        tile.make_gif_plot(args.outdir, args.logo)
+                            
+                elif (args.datatype == 4):
+                    # Instantiate an amplitude grid
+                    tile = btss.BasetileSs(tilename, region, args.cellsize)
+
+                    # Make an sidescan NetCDF grid
+                    tile.make_ss_grid(subdatalist, args.outdir)
+                    # Make optional grid
+                    if (args.gridkind == 2):
+                        tile.make_esri_grid(args.outdir)
+
+                    # Make a sidescan Postscript map
+                    tile.make_ss_ps_plot(args.outdir, args.logo)
+                    # Make option gif image
+                    if (args.mapkind == 2):
+                        tile.make_gif_plot(args.outdir, args.logo)
+                    
     else:
 #        print "No data to grid for tilename %s!\n" % (tilename)
          print "No data to grid!\n"
