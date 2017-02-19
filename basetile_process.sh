@@ -142,10 +142,13 @@ make_tiles() {
 	printf "The specified %s northern boundary exceeds the %s limit. Aborting...\n" $north $NORTH_LIMIT
 	exit 1
     fi
+
+    # Get the ps viewer currently used by the mb-system installation
+    psviewer=$(mbdefaults | grep 'ps viewer' | awk -F":" '{print $2}' | awk '{$1=$1}1')
     
     # Call the anbasemap.py python script 
     printf "\n\n%s UTC: Making ArcticNet basemap tiles from MB-System datalist %s...\n" $(date --utc +%Y%m%d-%H%M%S) $3
-    python $DIR_ROOT/anbasemap.py $datalist -D $DIR_SURFACES -- $DATATYPE $GRIDKIND $MAPKIND $REGION $CELLSIZE 
+    python $DIR_ROOT/anbasemap.py $datalist -D $DIR_SURFACES -- $DATATYPE $GRIDKIND $MAPKIND $REGION $CELLSIZE $psviewer $DISPLAY_PS
     printf "\n\n%s UTC: Done Making ArcticNet basemap tiles.\n" $(date --utc +%Y%m%d-%H%M%S)
 }
 

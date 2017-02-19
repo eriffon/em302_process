@@ -110,6 +110,8 @@ def main():
     parser.add_argument('mapkind',  type=int, default='1', help='MB-System mapkind (Postscript = 1; gif = 2')
     parser.add_argument('region',   type=str, help='region in west/east/south/north format')
     parser.add_argument('cellsize', type=float, help='cellsize')
+    parser.add_argument('psviewer', type=str, help='Name of the ps viewer')
+    parser.add_argument('disp_ps',  type=str, help='Flag to display Postscript files as they are being generated')
     parser.add_argument('-D', '--outdir', help='output directory in which to store the products')
     parser.add_argument('-l', '--logo', default='logos.sun', help='logo to display in legend. Default: logos.sun')
     args = parser.parse_args()
@@ -149,7 +151,7 @@ def main():
                   str(ymaxd) + 'd' + str(ymaxm) + 'm' + ymaxh + '.mb-1'
 
     # Check if a datalist for the specified region already exists. If it does, let the user decide whether to use this datalist ('e') or recreate a new one ('c')
-    choice = 'c'     # Force the creation of the datalist. Only changed if the file exists and the use wishes to use the existing datalist.
+    choice = 'c'     # Force the creation of the datalist. Only changed if the file exists and the user wishes to use the existing datalist.
     if path.isfile(subdatalist):
         print "\nThe datalist %s already exists! Would you like to use the existing datalist or create a new one?\n" % (subdatalist)
         choices = set(['e', 'c'])
@@ -200,7 +202,7 @@ def main():
                         tile.make_esri_grid(args.outdir)
 
                     # Make the Postscript map
-                    tile.make_bathy_ps_plot(args.outdir, args.logo)
+                    tile.make_bathy_ps_plot(args.outdir, args.logo, args.psviewer, args.disp_ps)
                     # Make option gif image
                     if (args.mapkind == 2):
                         tile.make_gif_plot(args.outdir, args.logo)
@@ -216,7 +218,7 @@ def main():
                         tile.make_esri_grid(args.outdir)
 
                     # Make an amplitude Postscript map
-                    tile.make_amp_ps_plot(args.outdir, args.logo)
+                    tile.make_amp_ps_plot(args.outdir, args.logo, args.psviewer, args.disp_ps)
                     # Make option gif image
                     if (args.mapkind == 2):
                         tile.make_gif_plot(args.outdir, args.logo)
@@ -232,14 +234,13 @@ def main():
                         tile.make_esri_grid(args.outdir)
 
                     # Make a sidescan Postscript map
-                    tile.make_ss_ps_plot(args.outdir, args.logo)
+                    tile.make_ss_ps_plot(args.outdir, args.logo, args.psviewer, args.disp_ps)
                     # Make option gif image
                     if (args.mapkind == 2):
                         tile.make_gif_plot(args.outdir, args.logo)
                     
     else:
-#        print "No data to grid for tilename %s!\n" % (tilename)
-         print "No data to grid!\n"
+        print "No data to grid for tilename %s!\n" % (tilename)
 
     # Close the datalist file
     f_datalist.close()

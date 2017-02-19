@@ -17,7 +17,7 @@ DIR_ROOT=$(pwd)
 ######################## EM302_PROCESS.SH ##############################
 
 # Path to the Simrad all files to read
-DIR_DATA_ALL=$DIR_ROOT/[REPLACE WITH PATH]
+DIR_DATA_ALL=$DIR_ROOT/[REPLACE_WITH_PATH]
 
 # Name of the Simrad all files MB-System datalist
 DATALIST_ALL=datalist_all.mb-1         
@@ -26,7 +26,7 @@ DATALIST_ALL=datalist_all.mb-1
 DATALIST_UPDATE_ALL=datalist_update_all.mb-1
 
 # Path to where the MB-System mb59 files should be written
-DIR_DATA_MB59=$DIR_ROOT/[REPLACE WITH PATH]
+DIR_DATA_MB59=$DIR_ROOT/[REPLACE_WITH_PATH]
 
 # Name of the MB-System mb59 MB-System datalist
 DATALIST_MB59=datalist_mb59.mb-1
@@ -38,7 +38,7 @@ DATALIST_UPDATE_MB59=datalist_update_mb59.mb-1
 DATALISTP_MB59=datalistp_mb59.mb-1
 
 # Path to the gsf files to read
-DIR_DATA_GSF=$DIR_ROOT/[REPLACE WITH PATH]
+DIR_DATA_GSF=$DIR_ROOT/[REPLACE_WITH_PATH]
 
 # Name of the gsf MB-System datalist
 DATALIST_GSF=datalist_gsf.mb-1
@@ -50,7 +50,7 @@ MAKE_ESF_SCRIPT=make_esf.sh
 ####################### BASETILE_PROCESS.SH ############################
 
 # Path to where the grids should be written
-DIR_SURFACES=$DIR_ROOT/[REPLACE WITH PATH]
+DIR_SURFACES=$DIR_ROOT/[REPLACE_WITH_PATH]
 
 # Name of the Mb-System projection to use (don't edit this! It links to the MB-System Projections.dat file)
 PROJECTION=Amundsen
@@ -58,19 +58,22 @@ PROJECTION=Amundsen
 # Cell size of the MB-System grid
 CELLSIZE=10
 
+# Display Postscript basetiles as they are being generated (may lead to memory problems)
+DISPLAY_PS=False
+
 ########################## TIDE_PROCESS.SH #############################
 
 # Path to where the Webtide file should be written
-DIR_WEBTIDE=$DIR_ROOT/[REPLACE WITH PATH]
+DIR_WEBTIDE=$DIR_ROOT/[REPLACE_WITH_PATH]
 
 # Path to where the CARIS Tide files should be written
-DIR_HIPS_TIDE=$DIR_ROOT/[REPLACE WITH PATH]
+DIR_HIPS_TIDE=$DIR_ROOT/[REPLACE_WITH_PATH]
 
 # Prefix name for the CARIS tide files                       
 HIPS_TIDE_PREFIX=hips_tide
 
 # Path to where the MB-System files should be written
-DIR_MB_TIDE=$DIR_ROOT/[REPLACE WITH PATH]
+DIR_MB_TIDE=$DIR_ROOT/[REPLACE_WITH_PATH]
 
 # Prefix name for the MB-System tide files                      
 MB_TIDE_PREFIX=mb_tide                             
@@ -81,10 +84,10 @@ WEBTIDE_NAME=Track_Elevation_Prediction_Time_in_GMT.html
 ########################## GNSS_PROCESS.SH #############################
 
 # Path the the NMEA_logger files
-NMEA=$DIR_ROOT/[REPLACE WITH PATH]
+NMEA=$DIR_ROOT/[REPLACE_WITH_PATH]
 
 # Path to the shiptracks                         
-DIR_SHIPTRACK=$DIR_ROOT/[REPLACE WITH PATH]
+DIR_SHIPTRACK=$DIR_ROOT/[REPLACE_WITH_PATH]
 
 # Prefix name for the shiptrack files
 SHIPTRACK_PREFIX=shiptrack

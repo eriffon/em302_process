@@ -1,3 +1,30 @@
+#!/usr/bin/env python
+
+########################################################################################################
+#
+# TITLE: basetile.py
+# AUTHOR: Jean-Guy Nistad
+# 
+# Copyright (C) 2016  Jean-Guy Nistad
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+########################################################################################################
+
+"""
+Class for parent basemap tile
+"""
+
 from os import path, remove
 import sys
 import subprocess
@@ -65,7 +92,7 @@ class Basetile(object):
 
 
     def __init__(self, name, region, cellsize, datatype='_Ztopo'):        
-        """Creates and initialize a new basetile object
+        """Create and initialize a new basetile object
 
         Positional arguments:
         name -- name of the basemap tile
@@ -332,12 +359,15 @@ class Basetile(object):
 
         
 
-    def make_ps_plot(self, outdir, logo):
+    def make_ps_plot(self, outdir, logo, display=False):
         """Make a Postscript map from the pre-generated NetCDF grid
 
         Keyword arguments:
         outdir -- directory path in which to store the map
         logo -- logo to display in the legend
+
+        Kerword argument:
+        display -- flag to determine if the resulting ps map should be launched upon execution (default: don't display)
         """
         # This function must be performed by the inheritated class
         print "Function %s is not implemented in the parent class!\n" % (sys._getframe().f_code.co_name)
